@@ -1,0 +1,236 @@
+@let current = view();
+
+<nav class="crumbs" aria-label="Ruta">
+  <a routerLink="/cuentas">Cuentas</a>
+  <span aria-hidden="true">/</span>
+  <span aria-current="page">{{ current?.account?.description ?? current?.account?.bankName ?? 'Detalle' }}</span>
+</nav>
+
+@switch (facade.detail().status) {
+  @case ('loading') {
+    <au-skeleton width="320px" height="34px" />
+    <au-skeleton height="160px" style="margin-top: 24px" />
+  }
+  @case ('error') {
+    @if (detailError(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadDetail(id())" />
+    }
+  }
+}
+
+@if (current) {
+  <au-page-header [title]="current.account.description ?? current.account.bankName ?? 'Cuenta virtual'">
+    @if (current.queryable) {
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() !== null"
+        [attr.aria-busy]="facade.busy() === 'refresh'"
+        (click)="refreshStatus()"
+      >
+        <au-icon name="refresh" [size]="16" />
+        {{ facade.busy() === 'refresh' ? 'Consultando…' : 'Consultar estado' }}
+      </button>
+    }
+  </au-page-header>
+
+  <div aria-live="assertive">
+    @if (actionError(); as failure) {
+      <au-error-state class="action-error" [error]="failure" />
+    }
+  </div>
+
+  <div class="status-line">
+    <au-status-badge
+      [label]="current.readiness.label"
+      [tone]="current.readiness.tone"
+      [technicalValue]="current.account.rawStatus"
+    />
+    @if (current.readiness.explanation; as explanation) {
+      <p>{{ explanation }}</p>
+    }
+  </div>
+
+  <div class="layout">
+    <section class="au-panel balance" aria-labelledby="balance-title">
+      <h2 id="balance-title" class="section-title">Saldo disponible</h2>
+      @if (current.account.availableBalance !== null) {
+        <p class="amount au-num">{{ current.account.availableBalance | auMoney: current.account.currency }}</p>
+        <p class="meta">
+          @if (current.account.balanceStale) {
+            Hubo movimientos desde la última consulta: vuelve a consultar el saldo.
+          } @else {
+            Consultado {{ current.account.balanceRefreshedAt | auDateTime }}
+          }
+        </p>
+      } @else {
+        <p class="meta">Aún no hay un saldo informado por el proveedor.</p>
+      }
+      @if (current.queryable) {
+        <button
+          type="button"
+          class="au-button au-button--secondary"
+          [disabled]="facade.busy() !== null"
+          [attr.aria-busy]="facade.busy() === 'balance'"
+          (click)="refreshBalance()"
+        >
+          {{ facade.busy() === 'balance' ? 'Consultando saldo…' : 'Consultar saldo' }}
+        </button>
+      }
+    </section>
+
+    <section class="instructions" aria-labelledby="instructions-title">
+      <h2 id="instructions-title" class="section-title">Instrucciones para recibir fondos</h2>
+      @if (current.account.fundsReady && current.account.accountNumber && current.account.routingNumber) {
+        <dl>
+          <div>
+            <dt>Banco</dt>
+            <dd>{{ current.account.bankName ?? 'No informado' }}</dd>
+          </div>
+          <div>
+            <dt>Routing number</dt>
+            <dd>
+              <span class="au-num value">{{ current.account.routingNumber }}</span>
+              <au-copy-button [value]="current.account.routingNumber" label="routing number" />
+            </dd>
+          </div>
+          <div>
+            <dt>Número de cuenta</dt>
+            <dd>
+              <span class="au-num value">{{ current.account.accountNumber }}</span>
+              <au-copy-button [value]="current.account.accountNumber" label="número de cuenta" />
+            </dd>
+          </div>
+        </dl>
+        <p class="meta">Compártelas solo con quien deba enviarte fondos.</p>
+      } @else {
+        <p class="meta">Aparecen cuando la cuenta esté operativa y el banco haya asignado un número de cuenta real.</p>
+      }
+    </section>
+  </div>
+
+  <section class="au-panel details" aria-labelledby="details-title">
+    <h2 id="details-title" class="section-title">Datos de la cuenta</h2>
+    <dl class="au-dl">
+      <dt>Tipo</dt>
+      <dd>{{ current.mode }}</dd>
+      <dt>Moneda</dt>
+      <dd>{{ current.account.currency ?? 'No informada' }}</dd>
+      <dt>Banco asignado</dt>
+      <dd>{{ current.account.bankName ?? current.account.bank ?? 'Pendiente de asignar' }}</dd>
+      <dt>Solicitada</dt>
+      <dd>{{ current.account.createdAt | auDateTime }}</dd>
+      <dt>Identificador en el proveedor</dt>
+      <dd>
+        @if (current.account.providerAccountId) {
+          <span class="au-mono">{{ current.account.providerAccountId }}</span>
+        } @else {
+          Sin confirmar
+        }
+      </dd>
+    </dl>
+  </section>
+
+  <section class="deposits" aria-labelledby="account-deposits-title">
+    <div class="section-head">
+      <h2 id="account-deposits-title" class="section-title">Depósitos de esta cuenta</h2>
+      <div class="head-actions">
+        @if (current.canSimulate) {
+          <button type="button" class="au-button au-button--quiet" (click)="startSimulation()">Simular depósito</button>
+        }
+        @if (current.queryable) {
+          <button
+            type="button"
+            class="au-button au-button--secondary"
+            [disabled]="deposits.syncing()"
+            [attr.aria-busy]="deposits.syncing()"
+            (click)="syncDeposits()"
+          >
+            {{ deposits.syncing() ? 'Trayendo depósitos…' : 'Traer del proveedor' }}
+          </button>
+        }
+      </div>
+    </div>
+    @switch (deposits.deposits().status) {
+      @case ('loading') {
+        <au-skeleton height="96px" />
+      }
+      @case ('error') {
+        @if (depositsError(); as failure) {
+          <au-error-state [error]="failure" (retry)="deposits.loadForAccount(id())" />
+        }
+      }
+      @case ('success') {
+        @if (depositList(); as list) {
+          @if (list.length === 0) {
+            <p class="meta empty">Esta cuenta aún no ha recibido depósitos.</p>
+          } @else {
+            <au-deposit-table [deposits]="list" caption="Depósitos de la cuenta" />
+          }
+        }
+      }
+    }
+  </section>
+}
+
+@if (simulateOpen()) {
+  <au-drawer
+    [open]="true"
+    heading="Simular depósito (sandbox)"
+    [busy]="facade.busy() === 'simulate'"
+    (closeRequested)="closeSimulation()"
+  >
+    <form id="simulate-form" [formGroup]="simulateForm" (ngSubmit)="submitSimulation()">
+      <p class="au-notice sandbox">Solo existe en el entorno de pruebas del proveedor. No mueve dinero real.</p>
+      @if (simulateError(); as failure) {
+        <au-error-state class="action-error" [error]="failure" />
+      }
+      <div class="au-field">
+        <label class="au-label" for="simulate-amount">Importe</label>
+        <input
+          id="simulate-amount"
+          class="au-input au-num amount-input"
+          type="number"
+          inputmode="decimal"
+          min="0.01"
+          step="0.01"
+          formControlName="amount"
+          [attr.aria-invalid]="simulateForm.controls.amount.invalid && simulateForm.controls.amount.touched"
+          aria-describedby="simulate-amount-help"
+        />
+        <p class="au-help" id="simulate-amount-help">
+          En la moneda de la cuenta ({{ current?.account?.currency ?? 'no informada' }}).
+        </p>
+        @if (simulateForm.controls.amount.invalid && simulateForm.controls.amount.touched) {
+          <p class="au-field-error">Escribe un importe mayor que cero.</p>
+        }
+      </div>
+      <fieldset class="au-field">
+        <legend class="au-label">Riel</legend>
+        <div class="au-choice">
+          <label><input type="radio" formControlName="paymentType" value="wire" />Wire</label>
+          <label><input type="radio" formControlName="paymentType" value="ach" />ACH</label>
+        </div>
+      </fieldset>
+    </form>
+    <div drawerFooter class="drawer-actions">
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() === 'simulate'"
+        (click)="closeSimulation()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="simulate-form"
+        class="au-button au-button--primary"
+        [disabled]="facade.busy() === 'simulate'"
+        [attr.aria-busy]="facade.busy() === 'simulate'"
+      >
+        {{ facade.busy() === 'simulate' ? 'Simulando…' : 'Simular' }}
+      </button>
+    </div>
+  </au-drawer>
+}

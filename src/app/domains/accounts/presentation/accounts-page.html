@@ -1,0 +1,139 @@
+<au-page-header
+  title="Cuentas"
+  description="Cuentas virtuales en bancos de EE. UU. para recibir fondos y pagar desde la organización."
+>
+  @if (canOpen() && readyToOpen()) {
+    <button type="button" class="au-button au-button--primary" (click)="startOpening()">Abrir cuenta</button>
+  }
+</au-page-header>
+
+@switch (facade.accounts().status) {
+  @case ('loading') {
+    <div aria-busy="true" class="loading">
+      <au-skeleton height="72px" />
+      <au-skeleton height="72px" />
+    </div>
+  }
+  @case ('error') {
+    @if (error(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadList()" />
+    }
+  }
+  @case ('success') {
+    @if (rows().length === 0) {
+      <section class="au-empty" aria-labelledby="accounts-empty">
+        <h2 id="accounts-empty">La organización aún no tiene cuentas</h2>
+        @if (readyToOpen()) {
+          @if (canOpen()) {
+            <p>La vinculación está aprobada: ya puedes abrir la primera cuenta virtual.</p>
+            <button type="button" class="au-button au-button--primary" (click)="startOpening()">Abrir cuenta</button>
+          } @else {
+            <p>
+              La vinculación está aprobada. Abre la cuenta una persona con rol de Administración, Tesorería o
+              Cumplimiento.
+            </p>
+          }
+        } @else {
+          <p>
+            Abrir una cuenta requiere que el proveedor bancario haya aprobado la vinculación de la empresa y habilitado
+            el producto de cuentas en EE. UU.
+          </p>
+          <a class="au-button au-button--secondary" routerLink="/vinculacion">Ver vinculación</a>
+        }
+      </section>
+    } @else {
+      <ul class="accounts" aria-label="Cuentas virtuales">
+        @for (row of rows(); track row.account.id) {
+          <li>
+            <a class="account" [routerLink]="['/cuentas', row.account.id]">
+              <span class="identity">
+                <span class="name">{{ row.account.description ?? row.account.bankName ?? 'Cuenta virtual' }}</span>
+                <span class="meta">
+                  {{ row.account.bankName ?? 'Banco pendiente de asignar' }}
+                  @if (row.digits) {
+                    · <span class="au-num">{{ row.digits }}</span>
+                  }
+                  @if (row.account.currency) {
+                    · {{ row.account.currency }}
+                  }
+                </span>
+              </span>
+              <au-status-badge
+                [label]="row.readiness.label"
+                [tone]="row.readiness.tone"
+                [technicalValue]="row.account.rawStatus"
+              />
+              <span class="balance">
+                @if (row.account.fundsReady && row.account.availableBalance !== null) {
+                  <span class="amount au-num">{{ row.account.availableBalance | auMoney: row.account.currency }}</span>
+                  <span class="meta">{{ row.account.balanceStale ? 'Saldo por actualizar' : 'Disponible' }}</span>
+                } @else {
+                  <span class="meta">Sin saldo disponible</span>
+                }
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  }
+}
+
+@if (drawerOpen()) {
+  <au-drawer
+    [open]="true"
+    heading="Abrir cuenta virtual"
+    [busy]="facade.busy() === 'open'"
+    (closeRequested)="closeDrawer()"
+  >
+    <form id="open-account-form" [formGroup]="openForm" (ngSubmit)="submitOpening()">
+      <div aria-live="assertive">
+        @if (openError(); as failure) {
+          <div class="au-notice au-notice--attention" role="alert">
+            <div>
+              <p class="notice-title">{{ failure.title }}</p>
+              <p>{{ failure.description }}</p>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="account-description">
+          Descripción <span class="au-optional">(opcional)</span>
+        </label>
+        <input id="account-description" class="au-input" formControlName="description" maxlength="255" />
+        <p class="au-help">Nombre interno para reconocer la cuenta, por ejemplo «Recaudo clientes EE. UU.».</p>
+      </div>
+      <fieldset class="au-field" aria-describedby="account-mode-help">
+        <legend class="au-label">Tipo de cuenta</legend>
+        <div class="au-choice">
+          <label><input type="radio" formControlName="mode" value="fiat" />Fiat</label>
+          <label><input type="radio" formControlName="mode" value="crypto" />Cripto</label>
+        </div>
+        <p class="au-help" id="account-mode-help">
+          No se puede cambiar después: pasar de fiat a cripto exige abrir otra cuenta.
+        </p>
+      </fieldset>
+      <p class="au-help">El banco y la moneda los asigna la plataforma según el entorno.</p>
+    </form>
+    <div drawerFooter class="drawer-actions">
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() === 'open'"
+        (click)="closeDrawer()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="open-account-form"
+        class="au-button au-button--primary"
+        [disabled]="facade.busy() === 'open'"
+        [attr.aria-busy]="facade.busy() === 'open'"
+      >
+        {{ facade.busy() === 'open' ? 'Solicitando…' : 'Solicitar apertura' }}
+      </button>
+    </div>
+  </au-drawer>
+}

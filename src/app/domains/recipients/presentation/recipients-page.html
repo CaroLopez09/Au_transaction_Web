@@ -1,0 +1,224 @@
+<au-page-header
+  title="Destinatarios"
+  description="Directorio de cuentas y wallets a las que la organización puede enviar pagos. Un destinatario usa un solo riel."
+>
+  @if (canManage() && treasuryEnabled()) {
+    <a class="au-button au-button--primary" routerLink="/destinatarios/nuevo">Registrar destinatario</a>
+  }
+</au-page-header>
+
+<p class="au-visually-hidden" aria-live="polite">{{ announcement() }}</p>
+
+@if (registeredNotice(); as notice) {
+  <p class="au-notice registered" role="status">
+    {{ notice.name }} quedó registrado.
+    @if (notice.alreadyExisted) {
+      El proveedor ya tenía este destino y devolvió el registro existente.
+    }
+  </p>
+}
+
+@if (canManage() && !treasuryEnabled() && onboardingLoaded()) {
+  <p class="au-notice gate">
+    Registrar destinatarios requiere que el proveedor bancario haya aprobado la vinculación de la empresa.
+    <a routerLink="/vinculacion">Ver vinculación</a>
+  </p>
+}
+
+@switch (facade.recipients().status) {
+  @case ('loading') {
+    <au-skeleton height="200px" />
+  }
+  @case ('error') {
+    @if (error(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadList()" />
+    }
+  }
+  @case ('success') {
+    @if (list().length === 0) {
+      <section class="au-empty" aria-labelledby="recipients-empty">
+        <h2 id="recipients-empty">Aún no hay destinatarios activos</h2>
+        <p>
+          Cada pago se envía a un destinatario registrado ante el proveedor bancario. Los datos bancarios no se pueden
+          editar después: para corregir uno se registra un reemplazo y se archiva el anterior.
+        </p>
+      </section>
+    } @else {
+      <div class="au-table-wrap au-only-desktop">
+        <table class="au-table">
+          <caption class="au-visually-hidden">
+            Destinatarios activos
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Titular</th>
+              <th scope="col">Riel</th>
+              <th scope="col">Destino</th>
+              <th scope="col">Proveedor</th>
+              <th scope="col">Alta</th>
+              @if (canManage()) {
+                <th scope="col"><span class="au-visually-hidden">Acciones</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (recipient of list(); track recipient.id) {
+              <tr>
+                <td class="au-cell-strong">{{ recipient.name }}</td>
+                <td>
+                  {{ recipient.rail ? rails[recipient.rail] : '—' }}
+                  @if (recipient.network) {
+                    <span class="sub">{{ recipient.network }}</span>
+                  }
+                </td>
+                <td>
+                  <span class="au-num">{{ recipient.maskedDestination ?? '—' }}</span>
+                  @if (recipient.bankName) {
+                    <span class="sub">{{ recipient.bankName }}</span>
+                  }
+                </td>
+                <td>
+                  @if (recipient.registeredWithProvider) {
+                    <au-status-badge label="Registrado" tone="success" />
+                  } @else {
+                    <au-status-badge label="Sin registrar" tone="attention" />
+                  }
+                </td>
+                <td class="nowrap">{{ recipient.createdAt | auDateTime: 'date' }}</td>
+                @if (canManage()) {
+                  <td class="actions">
+                    <button
+                      type="button"
+                      class="au-button au-button--quiet"
+                      [attr.aria-label]="'Archivar a ' + recipient.name"
+                      (click)="startArchive(recipient)"
+                    >
+                      Archivar
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <ul class="au-stack au-only-mobile" aria-label="Destinatarios activos">
+        @for (recipient of list(); track recipient.id) {
+          <li class="row">
+            <div>
+              <p class="au-cell-strong">{{ recipient.name }}</p>
+              <p class="sub">
+                {{ recipient.rail ? rails[recipient.rail] : '—' }} ·
+                <span class="au-num">{{ recipient.maskedDestination ?? '—' }}</span>
+              </p>
+            </div>
+            @if (canManage()) {
+              <button
+                type="button"
+                class="au-button au-button--quiet"
+                [attr.aria-label]="'Archivar a ' + recipient.name"
+                (click)="startArchive(recipient)"
+              >
+                Archivar
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+}
+
+@if (registered()) {
+  <section class="provider" aria-labelledby="provider-title">
+    <div class="section-head">
+      <div>
+        <h2 id="provider-title">Registrados en el proveedor</h2>
+        <p class="sub">
+          Compara el directorio con lo que tiene el proveedor, incluidos destinatarios creados fuera de este portal.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="provider()?.loading"
+        [attr.aria-busy]="provider()?.loading"
+        (click)="facade.loadProvider()"
+      >
+        {{ provider()?.loading ? 'Consultando…' : provider() ? 'Consultar de nuevo' : 'Consultar proveedor' }}
+      </button>
+    </div>
+    @if (provider(); as state) {
+      @if (state.error; as failure) {
+        <au-error-state [error]="failure" />
+      } @else if (state.data; as rows) {
+        @if (rows.length === 0) {
+          <p class="sub">El proveedor no tiene destinatarios para esta empresa.</p>
+        } @else {
+          <div class="au-table-wrap">
+            <table class="au-table">
+              <caption class="au-visually-hidden">
+                Destinatarios en el proveedor
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Titular</th>
+                  <th scope="col">Tipo de cuenta</th>
+                  <th scope="col">Destino</th>
+                  <th scope="col">En este portal</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of rows; track row.providerRecipientId ?? $index) {
+                  <tr>
+                    <td class="au-cell-strong">{{ row.name ?? 'Sin nombre' }}</td>
+                    <td>{{ row.accountType ?? '—' }}</td>
+                    <td class="au-num">{{ row.maskedDestination ?? '—' }}</td>
+                    <td>
+                      @if (row.localRecipientId) {
+                        <au-status-badge label="Sí" tone="success" />
+                      } @else {
+                        <au-status-badge label="Creado fuera del portal" tone="neutral" />
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </section>
+}
+
+@if (archiving(); as recipient) {
+  <au-confirm-dialog
+    [open]="true"
+    [heading]="'Archivar a ' + recipient.name"
+    confirmLabel="Archivar"
+    busyLabel="Archivando…"
+    [busy]="facade.busy() === 'archive'"
+    (confirmed)="confirmArchive()"
+    (cancelled)="cancelArchive()"
+  >
+    <p>
+      Dejará de aparecer en el directorio y no admitirá nuevos pagos. El proveedor no permite borrar destinatarios, así
+      que el registro se conserva archivado.
+    </p>
+    @if (replacementOptions().length > 0) {
+      <div class="au-field replacement">
+        <label class="au-label" for="replacement">Reemplazado por <span class="au-optional">(opcional)</span></label>
+        <select id="replacement" class="au-input" (change)="selectReplacement($event)">
+          <option value="">Sin reemplazo</option>
+          @for (option of replacementOptions(); track option.id) {
+            <option [value]="option.id">{{ option.name }} · {{ option.maskedDestination ?? '' }}</option>
+          }
+        </select>
+      </div>
+    }
+    @if (archiveError(); as failure) {
+      <p class="au-field-error" role="alert">{{ failure.description }}</p>
+    }
+  </au-confirm-dialog>
+}

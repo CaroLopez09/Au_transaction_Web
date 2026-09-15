@@ -1,0 +1,89 @@
+/*
+ * Tokens AU. Fuente normativa: DESIGN.md (frontmatter). Mantener ambos en sincronía.
+ * Brand = AU Brand.pdf; derivado = calculado para cumplir WCAG AA (ver DESIGN.md > Colors).
+ */
+:root {
+  /* Color · Brand */
+  --au-ink-deep: #101116;
+  --au-primary: #282b3d;
+  --au-text-body: #424556;
+  --au-text-warm: #5f5141;
+  --au-canvas: #fffffd;
+  --au-canvas-ledger: #f7f8e8;
+  --au-surface-sunken: #f5f5f5;
+  --au-mint: #93ddc6;
+  --au-mint-soft: #c7f5e5;
+  --au-attention: #f6feaa;
+  --au-critical: #e73726;
+  --au-wave-from: #85ffd9;
+  --au-wave-to: #f7ffaf;
+
+  /* Color · derivados */
+  --au-primary-hover: #1b1d2a;
+  --au-text-muted: #6b6e7e;
+  --au-border-control: #7a7d8c;
+  --au-hairline: #e6e6d8;
+  --au-critical-text: #b42a1c;
+  --au-critical-hover: #9a2317;
+  --au-success-text: #1e6b56;
+
+  /* Tipografía */
+  --au-font: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --au-font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --au-fs-amount: 2.125rem;
+  --au-fs-page: 1.75rem;
+  --au-fs-section: 1.1875rem;
+  --au-fs-body: 0.9375rem;
+  --au-fs-data: 0.875rem;
+  --au-fs-label: 0.8125rem;
+  --au-fs-caption: 0.75rem;
+
+  /* Espacio (base 4 px) */
+  --au-space-1: 4px;
+  --au-space-2: 8px;
+  --au-space-3: 12px;
+  --au-space-4: 16px;
+  --au-space-5: 20px;
+  --au-space-6: 24px;
+  --au-space-8: 32px;
+  --au-space-10: 40px;
+  --au-space-12: 48px;
+  --au-space-16: 64px;
+
+  /* Forma */
+  --au-radius-xs: 4px;
+  --au-radius-sm: 8px;
+  --au-radius-md: 12px;
+  --au-radius-lg: 20px;
+  --au-radius-pill: 999px;
+
+  /* Profundidad */
+  --au-shadow-1: 0 4px 16px rgb(16 17 22 / 0.08), 0 1px 2px rgb(16 17 22 / 0.06);
+  --au-shadow-2: 0 16px 48px rgb(16 17 22 / 0.16);
+  --au-backdrop: rgb(16 17 22 / 0.4);
+
+  /* Movimiento */
+  --au-dur-fast: 120ms;
+  --au-dur-base: 180ms;
+  --au-dur-slow: 240ms;
+  --au-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --au-ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);
+
+  /* Layout */
+  --au-nav-width: 248px;
+  --au-content-max: 1200px;
+  --au-topbar-height: 56px;
+
+  /* Capas */
+  --au-z-nav: 20;
+  --au-z-overlay: 40;
+  --au-z-toast: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --au-dur-fast: 0ms;
+    --au-dur-base: 0ms;
+    --au-dur-slow: 0ms;
+  }
+}

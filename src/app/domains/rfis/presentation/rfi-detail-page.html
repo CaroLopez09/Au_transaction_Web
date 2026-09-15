@@ -1,0 +1,301 @@
+@let current = rfi();
+
+<nav class="crumbs" aria-label="Ruta">
+  <a routerLink="/solicitudes">Solicitudes</a>
+  <span aria-hidden="true">/</span>
+  <span aria-current="page">Detalle</span>
+</nav>
+
+@switch (facade.detail().status) {
+  @case ('loading') {
+    <au-skeleton width="320px" height="34px" />
+    <au-skeleton height="240px" style="margin-top: 24px" />
+  }
+  @case ('error') {
+    @if (loadError(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadDetail(id())" />
+    }
+  }
+}
+
+@if (current) {
+  <au-page-header
+    title="Solicitud de información"
+    [description]="
+      current.totalItems +
+      (current.totalItems === 1 ? ' requerimiento' : ' requerimientos') +
+      ' del proveedor bancario.'
+    "
+  >
+    @if (editable() || current.open) {
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() !== null"
+        [attr.aria-busy]="facade.busy() === 'refresh'"
+        (click)="refresh()"
+      >
+        <au-icon name="refresh" [size]="16" />
+        {{ facade.busy() === 'refresh' ? 'Consultando…' : 'Consultar estado' }}
+      </button>
+    }
+  </au-page-header>
+
+  <p class="au-visually-hidden" aria-live="polite">{{ announcement() }}</p>
+
+  <div class="facts">
+    @if (status(); as copy) {
+      <au-status-badge [label]="copy.label" [tone]="copy.tone" [technicalValue]="current.rawStatus" />
+    }
+    <span>
+      @if (current.dueDate) {
+        Vence {{ current.dueDate | auDateTime }} · el plazo no se prorroga
+      } @else {
+        Sin fecha límite informada
+      }
+    </span>
+    @if (current.blocking; as blocked) {
+      <span class="blocking">
+        {{ blocking(blocked.type) }}
+        @if (blocked.payoutId) {
+          · <a [routerLink]="['/pagos', blocked.payoutId]">ver pago</a>
+        }
+      </span>
+    }
+  </div>
+
+  @if (!editable() && current.open) {
+    <p class="au-notice">Responde una persona con rol de Cumplimiento o Administración.</p>
+  }
+
+  <div aria-live="assertive">
+    @if (answerError(); as failure) {
+      <au-error-state class="answer-error" [error]="failure" />
+    }
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submitAnswers()" novalidate>
+    <ol class="items">
+      @for (item of current.items; track item.id; let index = $index) {
+        <li class="item" [attr.aria-labelledby]="'item-' + item.id">
+          <div class="item-head">
+            <p class="prompt" [id]="'item-' + item.id">
+              <span class="number au-num">{{ index + 1 }}</span>
+              {{ item.prompt ?? 'Requerimiento sin enunciado' }}
+            </p>
+            <au-status-badge
+              [label]="
+                item.status === 'answered' ? 'Respondido' : item.status === 'pending' ? 'Pendiente' : 'Sin estado'
+              "
+              [tone]="item.status === 'answered' ? 'success' : item.status === 'pending' ? 'attention' : 'neutral'"
+            />
+          </div>
+          @if (item.reviewNote) {
+            <p class="review-note"><strong>Observación del proveedor:</strong> {{ item.reviewNote }}</p>
+          }
+
+          @switch (item.answerType) {
+            @case ('text_short') {
+              <input
+                class="au-input"
+                [formControl]="control(item)"
+                [attr.maxlength]="item.spec.maxLength ?? 255"
+                [attr.aria-labelledby]="'item-' + item.id"
+                [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+              />
+            }
+            @case ('identifier') {
+              <input
+                class="au-input"
+                [formControl]="control(item)"
+                spellcheck="false"
+                [attr.aria-labelledby]="'item-' + item.id"
+                [attr.aria-describedby]="'hint-' + item.id"
+                [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+              />
+              <p class="au-help" [id]="'hint-' + item.id">
+                {{ identifierHints[item.spec.format ?? ''] ?? 'Identificador.' }}
+              </p>
+            }
+            @case ('text_long') {
+              <textarea
+                class="au-input"
+                rows="4"
+                [formControl]="control(item)"
+                [attr.maxlength]="item.spec.maxLength ?? 10000"
+                [attr.aria-labelledby]="'item-' + item.id"
+                [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+              ></textarea>
+            }
+            @case ('number') {
+              <div class="number-row">
+                <input
+                  class="au-input au-num short"
+                  type="number"
+                  inputmode="decimal"
+                  [formControl]="control(item)"
+                  [attr.min]="item.spec.min"
+                  [attr.max]="item.spec.max"
+                  [attr.aria-labelledby]="'item-' + item.id"
+                  [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+                />
+                @if (item.spec.unit) {
+                  <span class="unit">{{ item.spec.unit }}</span>
+                }
+              </div>
+            }
+            @case ('date') {
+              <input
+                class="au-input short"
+                type="date"
+                [formControl]="control(item)"
+                [attr.aria-labelledby]="'item-' + item.id"
+                [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+              />
+              @if (item.spec.minAge) {
+                <p class="au-help">Edad mínima: {{ item.spec.minAge }} años.</p>
+              }
+            }
+            @case ('boolean') {
+              <div class="au-choice" role="radiogroup" [attr.aria-labelledby]="'item-' + item.id">
+                <label><input type="radio" [formControl]="control(item)" [value]="true" />Sí</label>
+                <label><input type="radio" [formControl]="control(item)" [value]="false" />No</label>
+              </div>
+            }
+            @case ('choice') {
+              @if (item.spec.options.length) {
+                <select
+                  class="au-input"
+                  [formControl]="control(item)"
+                  [attr.aria-labelledby]="'item-' + item.id"
+                  [attr.aria-invalid]="!!itemErrors()[item.id] || !!localProblem(item)"
+                >
+                  <option value="">Selecciona</option>
+                  @for (option of item.spec.options; track option) {
+                    <option [value]="option">{{ option }}</option>
+                  }
+                </select>
+              } @else {
+                <p class="au-notice">El proveedor no envió las opciones de este requerimiento.</p>
+              }
+            }
+            @case ('document') {
+              @if (item.documents.length) {
+                <ul class="documents">
+                  @for (document of item.documents; track document.id) {
+                    <li>
+                      <span>
+                        {{ document.fileName ?? 'Archivo' }}
+                        @if (document.uploadedAt) {
+                          <span class="au-help inline">· {{ document.uploadedAt | auDateTime }}</span>
+                        }
+                      </span>
+                      <span class="doc-actions">
+                        <button
+                          type="button"
+                          class="au-button au-button--quiet"
+                          [disabled]="facade.busy() !== null"
+                          (click)="openDocument(item, document)"
+                        >
+                          <au-icon name="external-link" [size]="16" />
+                          {{ facade.busy() === 'link:' + document.id ? 'Abriendo…' : 'Abrir' }}
+                        </button>
+                        @if (editable()) {
+                          <button
+                            type="button"
+                            class="au-button au-button--quiet"
+                            [disabled]="facade.busy() !== null"
+                            [attr.aria-label]="'Quitar ' + (document.fileName ?? 'archivo')"
+                            (click)="startRemoval(item, document)"
+                          >
+                            Quitar
+                          </button>
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (editable()) {
+                <label
+                  class="au-button au-button--secondary upload"
+                  [class.busy]="facade.busy() === 'upload:' + item.id"
+                >
+                  {{ facade.busy() === 'upload:' + item.id ? 'Subiendo…' : 'Subir archivos' }}
+                  <input
+                    type="file"
+                    multiple
+                    [attr.accept]="(item.spec.mimeTypes.length ? item.spec.mimeTypes : null)?.join(',')"
+                    [disabled]="facade.busy() !== null"
+                    (change)="upload(item, $event)"
+                  />
+                </label>
+                <p class="au-help">Hasta {{ maxFiles(item) }} archivos de 30 MB cada uno.</p>
+              } @else if (!item.documents.length) {
+                <p class="au-help">Sin archivos.</p>
+              }
+            }
+            @case ('ubo_link') {
+              @if (item.spec.url) {
+                <a
+                  class="au-button au-button--secondary"
+                  [href]="item.spec.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir verificación del beneficiario
+                </a>
+              } @else {
+                <p class="au-notice">
+                  Este requerimiento necesita un enlace de verificación que el portal aún no puede generar. Contacta a
+                  soporte de AU.
+                </p>
+              }
+            }
+            @default {
+              <p class="au-notice">
+                Tipo de requerimiento no soportado todavía ({{ item.rawAnswerType ?? 'sin tipo' }}). Contacta a soporte
+                de AU.
+              </p>
+            }
+          }
+
+          @if (itemErrors()[item.id] || localProblem(item); as message) {
+            <p class="au-field-error" role="alert">{{ message }}</p>
+          }
+        </li>
+      }
+    </ol>
+
+    @if (editable() && valueItems().length > 0) {
+      <div class="submit-bar">
+        <p class="au-help">Las respuestas se guardan todas juntas: si alguna no es válida, no se guarda ninguna.</p>
+        <button
+          type="submit"
+          class="au-button au-button--primary"
+          [disabled]="facade.busy() !== null"
+          [attr.aria-busy]="facade.busy() === 'answer'"
+        >
+          {{ facade.busy() === 'answer' ? 'Enviando…' : 'Enviar respuestas' }}
+        </button>
+      </div>
+    }
+  </form>
+}
+
+@if (removing(); as target) {
+  <au-confirm-dialog
+    [open]="true"
+    heading="Quitar archivo"
+    confirmLabel="Quitar archivo"
+    busyLabel="Quitando…"
+    [busy]="facade.busy() === 'remove:' + target.document.id"
+    (confirmed)="confirmRemoval()"
+    (cancelled)="cancelRemoval()"
+  >
+    <p>
+      Se quitará «{{ target.document.fileName ?? 'archivo' }}» del requerimiento. El proveedor no permite quitar el
+      último archivo de un requerimiento ya respondido.
+    </p>
+  </au-confirm-dialog>
+}

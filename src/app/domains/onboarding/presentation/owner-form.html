@@ -1,0 +1,266 @@
+@let id = formId();
+
+<form [id]="id" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div aria-live="assertive">
+    @if (serverError(); as failure) {
+      <div class="error-summary" tabindex="-1" #errorSummary>
+        <au-icon name="alert" [size]="18" />
+        <div>
+          <p class="error-title">{{ failure.title }}</p>
+          <p>{{ failure.description }}</p>
+        </div>
+      </div>
+    }
+  </div>
+
+  <section class="group" [attr.aria-labelledby]="id + '-person'">
+    <h3 [id]="id + '-person'">Persona</h3>
+    @if (isUpdate()) {
+      <p class="readonly-name">{{ owner()?.fullName }}</p>
+      <p class="au-help">{{ owner()?.roleInCompany ?? 'Cargo no indicado' }}</p>
+      <p class="au-help">El nombre y el cargo no se pueden cambiar después del alta.</p>
+    } @else {
+      <div class="pair">
+        <div class="au-field">
+          <label class="au-label" [for]="id + '-firstName'">Nombre</label>
+          <input
+            [id]="id + '-firstName'"
+            class="au-input"
+            formControlName="firstName"
+            autocomplete="off"
+            [attr.aria-invalid]="invalid('firstName')"
+            [attr.aria-describedby]="describedBy('firstName')"
+          />
+          @if (errorFor('firstName'); as message) {
+            <p class="au-field-error" [id]="id + '-firstName-error'">{{ message }}</p>
+          }
+        </div>
+        <div class="au-field">
+          <label class="au-label" [for]="id + '-lastName'">Apellido</label>
+          <input
+            [id]="id + '-lastName'"
+            class="au-input"
+            formControlName="lastName"
+            autocomplete="off"
+            [attr.aria-invalid]="invalid('lastName')"
+            [attr.aria-describedby]="describedBy('lastName')"
+          />
+          @if (errorFor('lastName'); as message) {
+            <p class="au-field-error" [id]="id + '-lastName-error'">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-roleInCompany'">
+          Cargo en la empresa <span class="au-optional">(opcional)</span>
+        </label>
+        <input
+          [id]="id + '-roleInCompany'"
+          class="au-input"
+          formControlName="roleInCompany"
+          autocomplete="off"
+          [attr.aria-describedby]="id + '-roleInCompany-help'"
+        />
+        <p class="au-help" [id]="id + '-roleInCompany-help'">
+          Es solo una etiqueta: no define si la persona es beneficiaria final. Si lo dejas vacío se registra como
+          «Beneficiario Final».
+        </p>
+      </div>
+    }
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-email'"
+        >Correo <span class="au-optional">(necesario para subir sus documentos)</span></label
+      >
+      <input
+        [id]="id + '-email'"
+        class="au-input"
+        type="email"
+        formControlName="email"
+        autocomplete="off"
+        [attr.aria-invalid]="invalid('email')"
+        [attr.aria-describedby]="describedBy('email', id + '-email-help')"
+      />
+      <p class="au-help" [id]="id + '-email-help'">El proveedor identifica a cada persona por su correo.</p>
+      @if (errorFor('email'); as message) {
+        <p class="au-field-error" [id]="id + '-email-error'">{{ message }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="group" [attr.aria-labelledby]="id + '-ownership'">
+    <h3 [id]="id + '-ownership'">Participación y control</h3>
+
+    <fieldset class="au-field" [attr.aria-describedby]="describedBy('hasOwnership')">
+      <legend class="au-label">¿Tiene participación en la empresa?</legend>
+      <div class="au-choice" [class.invalid]="invalid('hasOwnership')">
+        <label><input type="radio" formControlName="hasOwnership" [value]="true" />Sí</label>
+        <label><input type="radio" formControlName="hasOwnership" [value]="false" />No</label>
+      </div>
+      @if (errorFor('hasOwnership'); as message) {
+        <p class="au-field-error" [id]="id + '-hasOwnership-error'">{{ message }}</p>
+      }
+    </fieldset>
+
+    <div class="au-field percentage">
+      <label class="au-label" [for]="id + '-ownershipPercentage'">Porcentaje de participación</label>
+      <div class="suffix">
+        <input
+          [id]="id + '-ownershipPercentage'"
+          class="au-input au-num"
+          type="number"
+          inputmode="decimal"
+          min="0"
+          max="100"
+          step="0.01"
+          formControlName="ownershipPercentage"
+          [attr.aria-invalid]="invalid('ownershipPercentage')"
+          [attr.aria-describedby]="describedBy('ownershipPercentage', id + '-percentage-help')"
+        />
+        <span aria-hidden="true">%</span>
+      </div>
+      @if (errorFor('ownershipPercentage'); as message) {
+        <p class="au-field-error" [id]="id + '-ownershipPercentage-error'">{{ message }}</p>
+      }
+      <p class="au-help hint" [id]="id + '-percentage-help'" aria-live="polite">
+        @switch (beneficialOwnerHint()) {
+          @case ('qualifies') {
+            <au-icon name="check" [size]="16" class="ok" />
+            Cuenta como beneficiario final.
+          }
+          @case ('does-not-qualify') {
+            Para contar como beneficiario final necesita participación declarada de al menos {{ threshold }} %.
+          }
+          @default {
+            Beneficiario final: participación declarada de al menos {{ threshold }} %.
+          }
+        }
+      </p>
+    </div>
+
+    <div class="pair">
+      <fieldset class="au-field" [attr.aria-describedby]="describedBy('hasControl')">
+        <legend class="au-label">¿Ejerce control?</legend>
+        <div class="au-choice" [class.invalid]="invalid('hasControl')">
+          <label><input type="radio" formControlName="hasControl" [value]="true" />Sí</label>
+          <label><input type="radio" formControlName="hasControl" [value]="false" />No</label>
+        </div>
+        @if (errorFor('hasControl'); as message) {
+          <p class="au-field-error" [id]="id + '-hasControl-error'">{{ message }}</p>
+        }
+      </fieldset>
+
+      <fieldset class="au-field" [attr.aria-describedby]="describedBy('isSigner')">
+        <legend class="au-label">¿Firma por la empresa?</legend>
+        <div class="au-choice" [class.invalid]="invalid('isSigner')">
+          <label><input type="radio" formControlName="isSigner" [value]="true" />Sí</label>
+          <label><input type="radio" formControlName="isSigner" [value]="false" />No</label>
+        </div>
+        @if (errorFor('isSigner'); as message) {
+          <p class="au-field-error" [id]="id + '-isSigner-error'">{{ message }}</p>
+        }
+      </fieldset>
+    </div>
+  </section>
+
+  <section class="group" [attr.aria-labelledby]="id + '-identity'">
+    <h3 [id]="id + '-identity'">Identificación</h3>
+
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-countryOfBirth'">País de nacimiento</label>
+      @switch (catalog().status) {
+        @case ('loading') {
+          <au-skeleton height="44px" />
+        }
+        @case ('available') {
+          @if (catalog(); as state) {
+            @if (state.status === 'available') {
+              <select
+                [id]="id + '-countryOfBirth'"
+                class="au-input"
+                formControlName="countryOfBirth"
+                [attr.aria-invalid]="invalid('countryOfBirth')"
+                [attr.aria-describedby]="describedBy('countryOfBirth')"
+              >
+                <option value="" disabled>Selecciona un país</option>
+                @for (country of countryOptions(state.countries); track country.alpha3) {
+                  <option [value]="country.alpha3">{{ country.name }}</option>
+                }
+              </select>
+            }
+          }
+        }
+        @case ('unavailable') {
+          <input
+            [id]="id + '-countryOfBirth'"
+            class="au-input code"
+            formControlName="countryOfBirth"
+            maxlength="3"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            [attr.aria-invalid]="invalid('countryOfBirth')"
+            [attr.aria-describedby]="describedBy('countryOfBirth', id + '-country-help')"
+          />
+          <p class="au-help" [id]="id + '-country-help'">
+            El listado de países no está disponible en este entorno. Escribe el código ISO de tres letras (COL, MEX,
+            USA…).
+          </p>
+        }
+      }
+      @if (errorFor('countryOfBirth'); as message) {
+        <p class="au-field-error" [id]="id + '-countryOfBirth-error'">{{ message }}</p>
+      }
+    </div>
+
+    <div class="pair">
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-documentType'">
+          Tipo de documento <span class="au-optional">(opcional)</span>
+        </label>
+        <input
+          [id]="id + '-documentType'"
+          class="au-input"
+          formControlName="documentType"
+          autocomplete="off"
+          spellcheck="false"
+          [attr.list]="id + '-document-types'"
+          [attr.aria-describedby]="id + '-documentType-help'"
+        />
+        <datalist [id]="id + '-document-types'">
+          <option value="national_id"></option>
+        </datalist>
+      </div>
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-documentNumber'">
+          Número <span class="au-optional">(opcional)</span>
+        </label>
+        <input
+          [id]="id + '-documentNumber'"
+          class="au-input au-num"
+          formControlName="documentNumber"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+    <p class="au-help doc-help" [id]="id + '-documentType-help'">
+      Código que usa el proveedor, por ejemplo <span class="au-mono">national_id</span>. Si no se indica, el proveedor
+      asume <span class="au-mono">national_id</span> y pedirá también el reverso del documento.
+    </p>
+  </section>
+
+  <section class="group" [attr.aria-labelledby]="id + '-pep'">
+    <h3 [id]="id + '-pep'">Exposición política</h3>
+    <fieldset class="au-field" [attr.aria-describedby]="describedBy('politicallyExposed', id + '-pep-help')">
+      <legend class="au-label">¿Es una persona expuesta políticamente?</legend>
+      <div class="au-choice" [class.invalid]="invalid('politicallyExposed')">
+        <label><input type="radio" formControlName="politicallyExposed" [value]="true" />Sí</label>
+        <label><input type="radio" formControlName="politicallyExposed" [value]="false" />No</label>
+      </div>
+      <p class="au-help" [id]="id + '-pep-help'">El proveedor lo exige para cada persona, sin excepciones.</p>
+      @if (errorFor('politicallyExposed'); as message) {
+        <p class="au-field-error" [id]="id + '-politicallyExposed-error'">{{ message }}</p>
+      }
+    </fieldset>
+  </section>
+</form>

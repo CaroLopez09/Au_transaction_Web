@@ -1,0 +1,117 @@
+@let current = overview();
+
+<header class="intro">
+  @if (current) {
+    <h1>{{ current.status.companyName }}</h1>
+  } @else if (facade.status().status === 'loading') {
+    <au-skeleton width="240px" height="34px" />
+  } @else {
+    <h1>Inicio</h1>
+  }
+  <p>Ingresaste con el rol {{ roleName() }}.</p>
+</header>
+
+@if (statusError(); as error) {
+  <au-error-state [error]="error" (retry)="facade.load()" />
+}
+
+@if (facade.status().status === 'loading') {
+  <div class="attention placeholder" aria-busy="true">
+    <au-skeleton width="120px" height="22px" />
+    <au-skeleton width="60%" height="24px" />
+    <au-skeleton width="90%" height="16px" />
+  </div>
+}
+
+@if (current) {
+  <section class="attention" [class.calm]="!current.attention.urgent" aria-labelledby="attention-title">
+    <div class="attention-body">
+      <au-status-badge [label]="current.attention.label" [tone]="current.attention.tone" />
+      <h2 id="attention-title">{{ current.attention.headline }}</h2>
+      <p>{{ current.attention.explanation }}</p>
+    </div>
+    <a class="au-button au-button--primary" [routerLink]="current.attention.link">
+      {{ current.attention.linkLabel }}
+      <au-icon name="arrow-right" [size]="16" />
+    </a>
+  </section>
+
+  <section class="overview" aria-labelledby="overview-title">
+    <h2 id="overview-title">Estado de la organización</h2>
+    <dl>
+      @if (current.attention.key !== 'onboarding') {
+        <div class="row">
+          <dt>Vinculación</dt>
+          <dd>
+            <a routerLink="/vinculacion">{{ current.onboarding.label }}</a>
+          </dd>
+        </div>
+      }
+      <div class="row">
+        <dt>Beneficiarios finales</dt>
+        <dd>
+          @if (roster(); as data) {
+            @if (data.members.length === 0) {
+              <span class="muted">Ninguno registrado</span>
+            } @else {
+              <span class="au-num">{{ data.members.length }}</span>
+              {{ data.members.length === 1 ? 'persona' : 'personas' }} ·
+              <span class="au-num">{{ data.totalOwnership | number: '1.0-2' }} %</span> de participación
+            }
+          } @else if (rosterError(); as error) {
+            <span class="muted">{{ error.title }}</span>
+          } @else {
+            <au-skeleton width="160px" />
+          }
+        </dd>
+      </div>
+      <div class="row">
+        <dt>Cuentas</dt>
+        <dd>
+          @if (accountSummary(); as summary) {
+            @if (summary.total === 0) {
+              <span class="muted">
+                {{
+                  current.status.readyForVirtualAccounts
+                    ? 'Ninguna abierta todavía'
+                    : 'Disponibles cuando la vinculación esté aprobada'
+                }}
+              </span>
+            } @else {
+              <a routerLink="/cuentas">
+                <span class="au-num">{{ summary.operational }}</span> de
+                <span class="au-num">{{ summary.total }}</span> operativas
+              </a>
+            }
+          } @else {
+            <au-skeleton width="160px" />
+          }
+        </dd>
+      </div>
+      @if (current.attention.key !== 'approvals' && pendingPayouts() > 0) {
+        <div class="row">
+          <dt>Pagos por aprobar</dt>
+          <dd>
+            <a routerLink="/pagos"
+              ><span class="au-num">{{ pendingPayouts() }}</span> en espera</a
+            >
+          </dd>
+        </div>
+      }
+      @if (current.attention.key !== 'rfis') {
+        <div class="row">
+          <dt>Solicitudes abiertas</dt>
+          <dd>
+            @if (openRfiCount() === 0) {
+              <span class="muted">Ninguna</span>
+            } @else {
+              <a routerLink="/solicitudes"
+                ><span class="au-num">{{ openRfiCount() }}</span> abiertas</a
+              >
+            }
+          </dd>
+        </div>
+      }
+    </dl>
+  </section>
+}

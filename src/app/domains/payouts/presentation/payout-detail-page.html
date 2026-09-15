@@ -1,0 +1,331 @@
+@let current = view();
+
+<nav class="crumbs" aria-label="Ruta">
+  <a routerLink="/pagos">Pagos</a>
+  <span aria-hidden="true">/</span>
+  <span aria-current="page">Detalle del pago</span>
+</nav>
+
+@switch (facade.detail().status) {
+  @case ('loading') {
+    <au-skeleton width="320px" height="34px" />
+    <au-skeleton height="200px" style="margin-top: 24px" />
+  }
+  @case ('error') {
+    @if (loadError(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadDetail(id())" />
+    }
+  }
+}
+
+@if (current) {
+  <au-page-header [title]="'Pago a ' + (current.recipient?.name ?? 'destinatario')">
+    @if (current.submitted) {
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() !== null"
+        [attr.aria-busy]="facade.busy() === 'refresh'"
+        (click)="refresh()"
+      >
+        <au-icon name="refresh" [size]="16" />
+        {{ facade.busy() === 'refresh' ? 'Consultando…' : 'Consultar estado' }}
+      </button>
+    }
+  </au-page-header>
+
+  @if (justPrepared() && current.payout.approvalState === 'PENDING_APPROVAL') {
+    <p class="au-notice prepared" role="status">
+      Pago preparado. No sale dinero hasta que otra persona con rol de aprobación lo revise y lo apruebe.
+    </p>
+  }
+
+  <div aria-live="assertive">
+    @if (actionError(); as failure) {
+      <au-error-state class="action-error" [error]="failure" />
+    }
+  </div>
+
+  @if (current.payout.blockedByRfiId) {
+    <p class="au-notice au-notice--attention blocked" role="alert">
+      <au-icon name="alert" [size]="18" />
+      <span>
+        El proveedor detuvo este pago hasta que se responda una solicitud de información.
+        <a [routerLink]="['/solicitudes', current.payout.blockedByRfiId]">Ver solicitud</a>
+      </span>
+    </p>
+  }
+
+  <div class="layout">
+    <section class="summary" aria-labelledby="summary-title">
+      <h2 id="summary-title" class="au-visually-hidden">Resumen</h2>
+      <div class="badges">
+        <au-status-badge
+          [label]="current.approval.label"
+          [tone]="current.approval.tone"
+          [technicalValue]="current.payout.approvalState"
+        />
+        @if (current.submitted) {
+          <au-status-badge
+            [label]="current.status.label"
+            [tone]="current.status.tone"
+            [technicalValue]="current.payout.rawStatus"
+          />
+        }
+      </div>
+      @if (current.submitted && current.status.explanation) {
+        <p class="explanation">{{ current.status.explanation }}</p>
+      }
+
+      <dl class="amounts">
+        <div>
+          <dt>Recibe el destinatario</dt>
+          <dd class="au-num main">{{ current.payout.amount | auMoney: current.payout.currency }}</dd>
+        </div>
+        <div>
+          <dt>Comisión del proveedor</dt>
+          <dd class="au-num">{{ current.payout.providerFee | auMoney: current.payout.currency }}</dd>
+        </div>
+        <div>
+          <dt>Comisión de la plataforma</dt>
+          <dd class="au-num">{{ current.payout.platformFee | auMoney: current.payout.currency }}</dd>
+        </div>
+        <div class="total">
+          <dt>Sale de la cuenta</dt>
+          <dd class="au-num">{{ current.payout.totalDebitAmount | auMoney: current.payout.currency }}</dd>
+        </div>
+      </dl>
+
+      @if (current.payout.approvalState === 'PENDING_APPROVAL') {
+        <div class="decision">
+          @if (current.ownPayout) {
+            <p class="au-notice">Lo preparaste tú: otra persona con rol de aprobación debe aprobarlo o rechazarlo.</p>
+          } @else if (current.canDecide) {
+            @if (current.quoteExpired) {
+              <p class="au-notice au-notice--attention">
+                La cotización venció: el pago ya no puede aprobarse con ese precio. Recházalo y prepara uno nuevo.
+              </p>
+            }
+            <div class="decision-actions">
+              <button
+                type="button"
+                class="au-button au-button--secondary"
+                [disabled]="facade.busy() !== null"
+                (click)="startRejection()"
+              >
+                Rechazar
+              </button>
+              <button
+                type="button"
+                class="au-button au-button--primary"
+                [disabled]="facade.busy() !== null || current.quoteExpired"
+                (click)="startApproval()"
+              >
+                Revisar y aprobar
+              </button>
+            </div>
+            @if (current.quoteSeconds !== null && current.quoteSeconds > 0) {
+              <p class="meta">
+                La cotización vence en <span class="au-num">{{ countdown(current.quoteSeconds) }}</span
+                >.
+              </p>
+            }
+          } @else {
+            <p class="au-notice">
+              Pendiente de aprobación por una persona con rol de Tesorería (aprobación) o Administración.
+            </p>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="au-panel" aria-labelledby="facts-title">
+      <h2 id="facts-title" class="section-title">Datos</h2>
+      <dl class="au-dl">
+        <dt>Destinatario</dt>
+        <dd>
+          {{ current.recipient?.name ?? 'No disponible en el directorio' }}
+          @if (current.recipient?.maskedDestination) {
+            <span class="au-num sub">{{ current.recipient.rail }} {{ current.recipient.maskedDestination }}</span>
+          }
+        </dd>
+        <dt>Cuenta de origen</dt>
+        <dd>{{ accountName() }}</dd>
+        <dt>Preparado por</dt>
+        <dd>
+          {{ current.isMine ? 'ti' : 'otra persona de la organización' }} · {{ current.payout.createdAt | auDateTime }}
+        </dd>
+        <dt>Precio</dt>
+        <dd>{{ current.payout.priceLocked ? 'Cerrado con cotización' : 'Sin cotización' }}</dd>
+        @if (current.payout.referenceNumber) {
+          <dt>Comprobante bancario</dt>
+          <dd class="au-mono">{{ current.payout.referenceNumber }}</dd>
+        }
+        @if (current.payout.paymentMethod) {
+          <dt>Método</dt>
+          <dd>{{ current.payout.paymentMethod }}</dd>
+        }
+        @if (current.payout.errorCode) {
+          <dt>Motivo del fallo</dt>
+          <dd>{{ current.payout.errorCode }}</dd>
+        }
+        @if (current.payout.providerPayoutId) {
+          <dt>Identificador en el proveedor</dt>
+          <dd class="au-mono">{{ current.payout.providerPayoutId }}</dd>
+        }
+      </dl>
+    </section>
+  </div>
+
+  <section class="timeline" aria-labelledby="timeline-title">
+    <h2 id="timeline-title" class="section-title">Línea de tiempo en el proveedor</h2>
+    @if (events(); as state) {
+      @if (state.loading) {
+        <au-skeleton height="80px" />
+      } @else if (state.error; as failure) {
+        <au-error-state [error]="failure" />
+      } @else if (state.data; as list) {
+        @if (list.length === 0) {
+          <p class="meta">El proveedor aún no informa eventos para este pago.</p>
+        } @else {
+          <ol class="events">
+            @for (event of list; track event.id ?? $index) {
+              <li>
+                <span class="dot" aria-hidden="true"></span>
+                <div>
+                  <p class="event-status">{{ event.status ?? 'Evento' }}</p>
+                  @if (event.message) {
+                    <p>{{ event.message }}</p>
+                  }
+                  <p class="meta">{{ event.createdAt | auDateTime }}</p>
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      }
+    } @else {
+      <p class="meta">Aparece cuando el pago se aprueba y se envía al proveedor.</p>
+    }
+  </section>
+}
+
+@if (approving() && current) {
+  <au-drawer
+    [open]="true"
+    heading="Aprobar y enviar el pago"
+    [busy]="facade.busy() === 'approve'"
+    (closeRequested)="closeApproval()"
+  >
+    <form id="approve-form" [formGroup]="approveForm" (ngSubmit)="confirmApproval()">
+      <dl class="confirm-amounts">
+        <div>
+          <dt>Recibe {{ current.recipient?.name ?? 'el destinatario' }}</dt>
+          <dd class="au-num">{{ current.payout.amount | auMoney: current.payout.currency }}</dd>
+        </div>
+        <div>
+          <dt>Sale de {{ accountName() }}</dt>
+          <dd class="au-num strong">{{ current.payout.totalDebitAmount | auMoney: current.payout.currency }}</dd>
+        </div>
+      </dl>
+      <p class="au-notice irreversible">Al aprobar, el pago se envía al proveedor bancario en ese momento.</p>
+
+      <div class="au-field">
+        <label class="au-label" for="nature">Naturaleza del pago <span class="au-optional">(opcional)</span></label>
+        <select id="nature" class="au-input" formControlName="natureOfPayment">
+          <option value="">Sin indicar</option>
+          @for (nature of natures; track nature) {
+            <option [value]="nature">{{ natureLabels[nature] }}</option>
+          }
+        </select>
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="memo">Memo para el banco <span class="au-optional">(opcional)</span></label>
+        <input id="memo" class="au-input" formControlName="memo" maxlength="255" aria-describedby="memo-help" />
+        <p class="au-help" id="memo-help">
+          Algunos bancos corresponsales lo exigen en pagos Wire. Máximo 255 caracteres.
+        </p>
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="comment">Nota interna <span class="au-optional">(opcional)</span></label>
+        <textarea id="comment" class="au-input" formControlName="comment" rows="3"></textarea>
+      </div>
+      <fieldset class="au-field">
+        <legend class="au-label">
+          Documentos de soporte <span class="au-optional">(opcional, máximo {{ maxDocuments }})</span>
+        </legend>
+        @if (documents().length > 0) {
+          <ul class="documents">
+            @for (document of documents(); track $index) {
+              <li>
+                <span>{{ document.fileName }} · {{ document.type === 'invoice' ? 'Factura' : 'Otro' }}</span>
+                <button
+                  type="button"
+                  class="au-button au-button--quiet"
+                  [attr.aria-label]="'Quitar ' + document.fileName"
+                  (click)="removeDocument($index)"
+                >
+                  Quitar
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        @if (documents().length < maxDocuments) {
+          <div class="uploads">
+            <label class="au-button au-button--secondary upload">
+              Adjuntar factura
+              <input type="file" (change)="addDocuments($event, 'invoice')" />
+            </label>
+            <label class="au-button au-button--secondary upload">
+              Adjuntar otro documento
+              <input type="file" (change)="addDocuments($event, 'other')" />
+            </label>
+          </div>
+        }
+        <p class="au-help">Cada archivo puede ocupar hasta 3 MB una vez codificado.</p>
+        @if (documentError(); as message) {
+          <p class="au-field-error" role="alert">{{ message }}</p>
+        }
+      </fieldset>
+    </form>
+    <div drawerFooter class="drawer-actions">
+      <button
+        type="button"
+        class="au-button au-button--secondary"
+        [disabled]="facade.busy() === 'approve'"
+        (click)="closeApproval()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="approve-form"
+        class="au-button au-button--primary"
+        [disabled]="facade.busy() === 'approve' || current.quoteExpired"
+        [attr.aria-busy]="facade.busy() === 'approve'"
+      >
+        {{ facade.busy() === 'approve' ? 'Aprobando y enviando…' : 'Aprobar y enviar' }}
+      </button>
+    </div>
+  </au-drawer>
+}
+
+@if (rejecting()) {
+  <au-confirm-dialog
+    [open]="true"
+    heading="Rechazar el pago"
+    confirmLabel="Rechazar pago"
+    busyLabel="Rechazando…"
+    [busy]="facade.busy() === 'reject'"
+    [confirmDisabled]="rejectForm.invalid"
+    (confirmed)="confirmRejection()"
+    (cancelled)="cancelRejection()"
+  >
+    <p>El pago no se enviará. Quien lo preparó verá el motivo.</p>
+    <form [formGroup]="rejectForm" class="reject-form" (ngSubmit)="confirmRejection()">
+      <label class="au-label" for="reject-reason">Motivo</label>
+      <textarea id="reject-reason" class="au-input" formControlName="reason" rows="3"></textarea>
+    </form>
+  </au-confirm-dialog>
+}

@@ -1,0 +1,194 @@
+@let step = current();
+
+<au-page-header
+  title="Vinculación"
+  description="Completa la información de la empresa por pasos. Puedes guardar y volver cuando quieras."
+>
+  @if (canRefresh()) {
+    <button
+      type="button"
+      class="au-button au-button--secondary"
+      [disabled]="facade.refreshing()"
+      [attr.aria-busy]="facade.refreshing()"
+      (click)="facade.refreshFromProvider()"
+    >
+      <au-icon name="refresh" [size]="16" />
+      {{ facade.refreshing() ? 'Consultando…' : 'Consultar estado' }}
+    </button>
+  }
+</au-page-header>
+
+<div class="status-line">
+  @if (stage(); as copy) {
+    <au-status-badge [label]="copy.label" [tone]="copy.tone" [technicalValue]="status()?.rawStatus ?? null" />
+  } @else if (statusError(); as failure) {
+    <span class="muted">{{ failure.title }}</span>
+  }
+  @if (canManage()) {
+    <span class="save-state" [class.warn]="wizard.dirty() || wizard.saveError()" aria-live="polite">
+      {{ saveLabel() }}
+      @if (wizard.savedAt() && !wizard.dirty() && wizard.busy() !== 'save-draft') {
+        · {{ wizard.savedAt() | auDateTime }}
+      }
+    </span>
+  }
+</div>
+
+@if (facade.refreshError(); as failure) {
+  <au-error-state class="block-error" [error]="failure" (retry)="facade.refreshFromProvider()" />
+}
+@if (!canManage()) {
+  <p class="au-notice block-error">
+    Completa la vinculación una persona con rol de Administración o Cumplimiento. Aquí puedes consultar lo rellenado.
+  </p>
+}
+
+@switch (wizard.loaded()) {
+  @case ('loading') {
+    <div class="layout" aria-busy="true">
+      <au-skeleton height="320px" />
+      <au-skeleton height="480px" />
+    </div>
+  }
+  @case ('error') {
+    @if (wizard.loadError(); as failure) {
+      <au-error-state [error]="failure" (retry)="wizard.load()" />
+    }
+  }
+  @case ('ready') {
+    <div class="layout">
+      <nav class="steps" aria-label="Pasos de la vinculación">
+        <label class="au-visually-hidden" for="step-select">Paso</label>
+        <select id="step-select" class="au-input mobile-select" [value]="step.key" (change)="selectStep($event)">
+          @for (item of steps; track item.key; let index = $index) {
+            <option [value]="item.key">{{ index + 1 }}. {{ item.title }}</option>
+          }
+        </select>
+        <ol>
+          @for (item of steps; track item.key; let index = $index) {
+            <li>
+              <button
+                type="button"
+                class="step"
+                [class.current]="item === step"
+                [attr.aria-current]="item === step ? 'step' : null"
+                (click)="goTo(item.key)"
+              >
+                <span class="marker" [class]="'marker ' + progress()[item.key]" aria-hidden="true">
+                  @if (progress()[item.key] === 'complete') {
+                    <au-icon name="check" [size]="13" />
+                  } @else {
+                    {{ index + 1 }}
+                  }
+                </span>
+                <span class="label">
+                  {{ item.title }}
+                  <span class="au-visually-hidden">
+                    ,
+                    {{
+                      progress()[item.key] === 'complete'
+                        ? 'completo'
+                        : progress()[item.key] === 'incomplete'
+                          ? 'en curso'
+                          : 'sin empezar'
+                    }}
+                  </span>
+                </span>
+              </button>
+            </li>
+          }
+        </ol>
+      </nav>
+
+      <section class="panel" aria-labelledby="wizard-step-title">
+        <p class="step-count">Paso {{ currentIndex() + 1 }} de {{ steps.length }}</p>
+        <h2 id="wizard-step-title" tabindex="-1">{{ step.title }}</h2>
+        <p class="step-description">{{ step.description }}</p>
+
+        @switch (step.key) {
+          @case ('company') {
+            <au-company-step
+              [value]="wizard.draft().company"
+              [readonly]="!canManage()"
+              [pending]="pending().company"
+              (changed)="wizard.updateCompany($event)"
+            />
+          }
+          @case ('activity') {
+            <au-activity-step
+              [value]="wizard.draft().activity"
+              [readonly]="!canManage()"
+              [pending]="pending().activity"
+              (changed)="wizard.updateActivity($event)"
+            />
+          }
+          @case ('representative') {
+            <au-representative-step
+              [value]="wizard.draft().representative"
+              [readonly]="!canManage()"
+              [pending]="pending().representative"
+              (changed)="wizard.updateRepresentative($event)"
+            />
+          }
+          @case ('owners') {
+            <au-owners-step
+              [pending]="pending().owners"
+              [registered]="registered()"
+              [defaultCountry]="defaultCountry()"
+            />
+          }
+          @case ('review') {
+            <au-send-step [sections]="sections()" [registered]="registered()" (goTo)="goTo($event)" />
+          }
+          @case ('documents') {
+            <au-documents-step
+              [registered]="registered()"
+              [pending]="pending().documents"
+              [defaultCountry]="defaultCountry()"
+            />
+          }
+          @case ('verification') {
+            <au-verification-step [status]="status()" />
+          }
+        }
+
+        @if (wizard.saveError(); as failure) {
+          <au-error-state class="save-error" [error]="failure" (retry)="saveNow()" />
+        }
+
+        <div class="footer">
+          <button
+            type="button"
+            class="au-button au-button--quiet"
+            [disabled]="currentIndex() === 0"
+            (click)="previous()"
+          >
+            Anterior
+          </button>
+          <div class="footer-end">
+            @if (canManage()) {
+              <button
+                type="button"
+                class="au-button au-button--secondary"
+                [disabled]="!wizard.dirty() || wizard.busy() !== null"
+                (click)="saveNow()"
+              >
+                Guardar borrador
+              </button>
+            }
+            @if (currentIndex() < steps.length - 1) {
+              <button
+                type="button"
+                class="au-button au-button--primary"
+                [disabled]="wizard.busy() === 'save-draft'"
+                (click)="next()"
+              >
+                Siguiente
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+}

@@ -1,0 +1,364 @@
+<nav class="crumbs" aria-label="Ruta">
+  <a routerLink="/destinatarios">Destinatarios</a>
+  <span aria-hidden="true">/</span>
+  <span aria-current="page">Registrar</span>
+</nav>
+
+<au-page-header
+  title="Registrar destinatario"
+  description="Los datos quedan registrados en el proveedor bancario y no se pueden editar después. Revisa cada dígito."
+/>
+
+@if (onboardingLoaded() && !treasuryEnabled()) {
+  <section class="au-empty" aria-labelledby="recipient-gate">
+    <h2 id="recipient-gate">Todavía no se pueden registrar destinatarios</h2>
+    <p>El registro se habilita cuando el proveedor bancario haya aprobado la vinculación de la empresa.</p>
+    <a class="au-button au-button--secondary" routerLink="/vinculacion">Ver vinculación</a>
+  </section>
+} @else if (onboardingLoaded()) {
+  <form id="recipient-form" class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div aria-live="assertive">
+      @if (serverError(); as failure) {
+        <div class="error-summary" id="recipient-error" tabindex="-1">
+          <au-icon name="alert" [size]="18" />
+          <div>
+            <p class="error-title">{{ failure.title }}</p>
+            <p>{{ failure.description }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <section class="group" aria-labelledby="rail-title">
+      <h2 id="rail-title">1. Cómo recibe el dinero</h2>
+      <fieldset class="au-field" [attr.aria-describedby]="errorFor('rail') ? 'rail-error' : 'rail-help'">
+        <legend class="au-label">Riel</legend>
+        <div class="rails" [class.invalid]="invalid('rail')">
+          <label class="rail-option">
+            <input type="radio" formControlName="rail" value="ACH" />
+            <span class="rail-name">ACH</span>
+            <span class="rail-help">Cuenta bancaria en EE. UU.</span>
+          </label>
+          <label class="rail-option">
+            <input type="radio" formControlName="rail" value="WIRE" />
+            <span class="rail-name">Wire</span>
+            <span class="rail-help">Transferencia bancaria doméstica</span>
+          </label>
+          <label class="rail-option">
+            <input type="radio" formControlName="rail" value="WALLET" />
+            <span class="rail-name">Wallet</span>
+            <span class="rail-help">Stablecoin en una red blockchain</span>
+          </label>
+        </div>
+        <p class="au-help" id="rail-help">
+          El riel del pago lo define el destinatario: para usar otro riel hay que registrar otro destinatario.
+        </p>
+        @if (errorFor('rail'); as message) {
+          <p class="au-field-error" id="rail-error">Elige un riel.</p>
+        }
+      </fieldset>
+    </section>
+
+    @if (rail()) {
+      <section class="group" aria-labelledby="holder-title">
+        <h2 id="holder-title">2. Titular</h2>
+        <fieldset class="au-field">
+          <legend class="au-label">Tipo de titular</legend>
+          <div class="au-choice">
+            <label><input type="radio" formControlName="business" value="company" />Empresa</label>
+            <label><input type="radio" formControlName="business" value="person" />Persona</label>
+          </div>
+        </fieldset>
+        @if (business() === 'company') {
+          <div class="au-field">
+            <label class="au-label" for="companyName">Razón social</label>
+            <input
+              id="companyName"
+              class="au-input"
+              formControlName="companyName"
+              [attr.aria-invalid]="invalid('companyName')"
+              [attr.aria-describedby]="errorFor('companyName') ? 'companyName-error' : null"
+            />
+            @if (errorFor('companyName'); as message) {
+              <p class="au-field-error" id="companyName-error">{{ message }}</p>
+            }
+          </div>
+        } @else {
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="firstName">Nombre</label>
+              <input
+                id="firstName"
+                class="au-input"
+                formControlName="firstName"
+                [attr.aria-invalid]="invalid('firstName')"
+                [attr.aria-describedby]="errorFor('firstName') ? 'firstName-error' : null"
+              />
+              @if (errorFor('firstName'); as message) {
+                <p class="au-field-error" id="firstName-error">{{ message }}</p>
+              }
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="lastName">Apellido</label>
+              <input
+                id="lastName"
+                class="au-input"
+                formControlName="lastName"
+                [attr.aria-invalid]="invalid('lastName')"
+                [attr.aria-describedby]="errorFor('lastName') ? 'lastName-error' : null"
+              />
+              @if (errorFor('lastName'); as message) {
+                <p class="au-field-error" id="lastName-error">{{ message }}</p>
+              }
+            </div>
+          </div>
+        }
+        <div class="pair">
+          <div class="au-field">
+            <label class="au-label" for="email">Correo <span class="au-optional">(opcional)</span></label>
+            <input
+              id="email"
+              type="email"
+              class="au-input"
+              formControlName="email"
+              [attr.aria-invalid]="invalid('email')"
+              [attr.aria-describedby]="errorFor('email') ? 'email-error' : null"
+            />
+            @if (errorFor('email'); as message) {
+              <p class="au-field-error" id="email-error">{{ message }}</p>
+            }
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="phone">Teléfono <span class="au-optional">(opcional)</span></label>
+            <input
+              id="phone"
+              type="tel"
+              class="au-input"
+              formControlName="phone"
+              maxlength="16"
+              [attr.aria-invalid]="invalid('phone')"
+              [attr.aria-describedby]="errorFor('phone') ? 'phone-error' : null"
+            />
+            @if (errorFor('phone'); as message) {
+              <p class="au-field-error" id="phone-error">{{ message }}</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="destination-title">
+        <h2 id="destination-title">3. {{ rail() === 'WALLET' ? 'Wallet' : 'Cuenta bancaria' }}</h2>
+        @if (isBank()) {
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="routingNumber">Routing number</label>
+              <input
+                id="routingNumber"
+                class="au-input au-num"
+                formControlName="routingNumber"
+                inputmode="numeric"
+                maxlength="9"
+                autocomplete="off"
+                [attr.aria-invalid]="invalid('routingNumber')"
+                [attr.aria-describedby]="errorFor('routingNumber') ? 'routingNumber-error' : null"
+              />
+              @if (errorFor('routingNumber'); as message) {
+                <p class="au-field-error" id="routingNumber-error">{{ message }}</p>
+              }
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="accountNumber">Número de cuenta</label>
+              <input
+                id="accountNumber"
+                class="au-input au-num"
+                formControlName="accountNumber"
+                autocomplete="off"
+                [attr.aria-invalid]="invalid('accountNumber')"
+                [attr.aria-describedby]="errorFor('accountNumber') ? 'accountNumber-error' : null"
+              />
+              @if (errorFor('accountNumber'); as message) {
+                <p class="au-field-error" id="accountNumber-error">{{ message }}</p>
+              }
+            </div>
+          </div>
+          <fieldset class="au-field" [attr.aria-describedby]="errorFor('accountKind') ? 'accountKind-error' : null">
+            <legend class="au-label">Tipo de cuenta</legend>
+            <div class="au-choice" [class.invalid]="invalid('accountKind')">
+              <label><input type="radio" formControlName="accountKind" value="checking" />Corriente</label>
+              <label><input type="radio" formControlName="accountKind" value="savings" />Ahorros</label>
+            </div>
+            @if (errorFor('accountKind'); as message) {
+              <p class="au-field-error" id="accountKind-error">{{ message }}</p>
+            }
+          </fieldset>
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="bankName">Banco <span class="au-optional">(opcional)</span></label>
+              <input id="bankName" class="au-input" formControlName="bankName" />
+            </div>
+            @if (rail() === 'WIRE') {
+              <div class="au-field">
+                <label class="au-label" for="swiftCode">SWIFT/BIC <span class="au-optional">(opcional)</span></label>
+                <input
+                  id="swiftCode"
+                  class="au-input code"
+                  formControlName="swiftCode"
+                  maxlength="11"
+                  autocapitalize="characters"
+                  [attr.aria-invalid]="invalid('swiftCode')"
+                  [attr.aria-describedby]="errorFor('swiftCode') ? 'swiftCode-error' : null"
+                />
+                @if (errorFor('swiftCode'); as message) {
+                  <p class="au-field-error" id="swiftCode-error">{{ message }}</p>
+                }
+              </div>
+            } @else {
+              <div class="au-field">
+                <label class="au-label" for="bankAddressText"
+                  >Dirección del banco <span class="au-optional">(opcional)</span></label
+                >
+                <input id="bankAddressText" class="au-input" formControlName="bankAddressText" />
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="token">Token</label>
+              <select
+                id="token"
+                class="au-input"
+                formControlName="token"
+                [attr.aria-invalid]="invalid('token')"
+                [attr.aria-describedby]="errorFor('token') ? 'token-error' : null"
+              >
+                <option value="" disabled>Selecciona</option>
+                @for (token of tokens; track token.value) {
+                  <option [value]="token.value">{{ token.label }}</option>
+                }
+              </select>
+              @if (errorFor('token'); as message) {
+                <p class="au-field-error" id="token-error">{{ message }}</p>
+              }
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="network">Red</label>
+              <select
+                id="network"
+                class="au-input"
+                formControlName="network"
+                [attr.aria-invalid]="invalid('network')"
+                [attr.aria-describedby]="errorFor('network') ? 'network-error' : 'network-help'"
+              >
+                <option value="" disabled>{{ networks().length ? 'Selecciona' : 'Elige primero el token' }}</option>
+                @for (network of networks(); track network) {
+                  <option [value]="network">{{ network }}</option>
+                }
+              </select>
+              <p class="au-help" id="network-help">Solo las redes en las que el proveedor admite ese token.</p>
+              @if (errorFor('network'); as message) {
+                <p class="au-field-error" id="network-error">{{ message }}</p>
+              }
+            </div>
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="walletAddress">Dirección de la wallet</label>
+            <input
+              id="walletAddress"
+              class="au-input au-mono"
+              formControlName="walletAddress"
+              autocomplete="off"
+              spellcheck="false"
+              [attr.aria-invalid]="invalid('walletAddress')"
+              [attr.aria-describedby]="errorFor('walletAddress') ? 'walletAddress-error' : null"
+            />
+            @if (errorFor('walletAddress'); as message) {
+              <p class="au-field-error" id="walletAddress-error">{{ message }}</p>
+            }
+          </div>
+        }
+        <div class="pair">
+          <div class="au-field">
+            <label class="au-label" for="docType"
+              >Tipo de documento del titular <span class="au-optional">(opcional)</span></label
+            >
+            <input id="docType" class="au-input" formControlName="docType" />
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="docNumber"
+              >Número de documento <span class="au-optional">(opcional)</span></label
+            >
+            <input id="docNumber" class="au-input au-num" formControlName="docNumber" />
+          </div>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="address-title">
+        <h2 id="address-title">
+          4. Dirección del titular
+          @if (!isBank()) {
+            <span class="au-optional">(opcional)</span>
+          }
+        </h2>
+        @if (errorFor('addressLines'); as message) {
+          <p class="au-field-error address-error" role="alert">{{ message }}</p>
+        }
+        <div class="au-field">
+          <label class="au-label" for="streetName">Calle y número</label>
+          <input
+            id="streetName"
+            class="au-input"
+            formControlName="streetName"
+            autocomplete="address-line1"
+            [attr.aria-invalid]="invalid('addressLines')"
+          />
+        </div>
+        <div class="pair">
+          <div class="au-field">
+            <label class="au-label" for="city">Ciudad</label>
+            <input id="city" class="au-input" formControlName="city" autocomplete="address-level2" />
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="state">Estado o departamento</label>
+            <input id="state" class="au-input" formControlName="state" autocomplete="address-level1" />
+          </div>
+        </div>
+        <div class="pair">
+          <div class="au-field">
+            <label class="au-label" for="postalCode">Código postal</label>
+            <input id="postalCode" class="au-input" formControlName="postalCode" autocomplete="postal-code" />
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="country">País</label>
+            <input
+              id="country"
+              class="au-input code"
+              formControlName="country"
+              maxlength="2"
+              autocapitalize="characters"
+              autocomplete="country"
+              [attr.aria-invalid]="invalid('country')"
+              [attr.aria-describedby]="errorFor('country') ? 'country-error' : 'country-help'"
+            />
+            <p class="au-help" id="country-help">Código ISO de dos letras (US, CO, MX).</p>
+            @if (errorFor('country'); as message) {
+              <p class="au-field-error" id="country-error">{{ message }}</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <div class="submit-bar">
+        <a class="au-button au-button--secondary" routerLink="/destinatarios">Cancelar</a>
+        <button
+          type="submit"
+          class="au-button au-button--primary"
+          [disabled]="facade.busy() === 'register'"
+          [attr.aria-busy]="facade.busy() === 'register'"
+        >
+          {{ facade.busy() === 'register' ? 'Registrando…' : 'Registrar destinatario' }}
+        </button>
+      </div>
+    }
+  </form>
+}

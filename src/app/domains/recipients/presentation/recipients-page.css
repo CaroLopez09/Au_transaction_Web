@@ -1,0 +1,56 @@
+.registered {
+  margin-bottom: var(--au-space-6);
+}
+
+.gate {
+  margin-bottom: var(--au-space-6);
+}
+
+.gate a {
+  margin-left: var(--au-space-2);
+  color: var(--au-text-warm);
+  font-weight: 500;
+}
+
+.sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-caption);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.actions {
+  text-align: right;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--au-space-3);
+}
+
+.provider {
+  margin-top: var(--au-space-12);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--au-space-3);
+  margin-bottom: var(--au-space-4);
+}
+
+.section-head h2 {
+  font-size: var(--au-fs-section);
+}
+
+.replacement {
+  margin: var(--au-space-4) 0 0;
+}

@@ -1,0 +1,131 @@
+<au-page-header
+  title="Pagos"
+  description="Cada pago lo prepara una persona y lo aprueba otra antes de salir hacia el proveedor bancario."
+>
+  @if (registered()) {
+    <a class="au-button au-button--secondary" routerLink="/pagos/historial">Historial en el proveedor</a>
+  }
+  @if (canPrepare() && treasuryEnabled()) {
+    <a class="au-button au-button--primary" routerLink="/pagos/nuevo">Nuevo pago</a>
+  }
+</au-page-header>
+
+@switch (facade.list().status) {
+  @case ('loading') {
+    <au-skeleton height="220px" />
+  }
+  @case ('error') {
+    @if (error(); as failure) {
+      <au-error-state [error]="failure" (retry)="facade.loadList()" />
+    }
+  }
+  @case ('success') {
+    @if (all().length === 0) {
+      <section class="au-empty" aria-labelledby="payouts-empty">
+        <h2 id="payouts-empty">Aún no hay pagos</h2>
+        @if (!treasuryEnabled()) {
+          <p>Preparar pagos requiere que el proveedor bancario haya aprobado la vinculación de la empresa.</p>
+          <a class="au-button au-button--secondary" routerLink="/vinculacion">Ver vinculación</a>
+        } @else if (canPrepare()) {
+          <p>
+            Un pago necesita una cuenta operativa con saldo y un destinatario registrado. Después lo aprueba otra
+            persona.
+          </p>
+          <a class="au-button au-button--primary" routerLink="/pagos/nuevo">Nuevo pago</a>
+        } @else {
+          <p>Los pagos los prepara una persona con rol de Tesorería (preparación) o Administración.</p>
+        }
+      </section>
+    } @else {
+      @if (pending().length > 0) {
+        <section class="queue" aria-labelledby="pending-title">
+          <h2 id="pending-title">
+            Por aprobar <span class="count au-num">{{ pending().length }}</span>
+          </h2>
+          <ul class="au-stack">
+            @for (payout of pending(); track payout.id) {
+              <li>
+                <a class="pending-row" [routerLink]="['/pagos', payout.id]">
+                  <span class="who">
+                    <span class="name">{{ recipientName(payout) }}</span>
+                    <span class="meta"
+                      >Preparado por {{ isMine(payout) ? 'ti' : 'otra persona' }} ·
+                      {{ payout.createdAt | auDateTime }}</span
+                    >
+                  </span>
+                  <span class="amount au-num">{{ payout.amount | auMoney: payout.currency }}</span>
+                  <span class="cta">
+                    @if (canApprove() && !isMine(payout)) {
+                      Revisar y aprobar
+                    } @else {
+                      Ver detalle
+                    }
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (others().length > 0) {
+        <section aria-labelledby="recent-title">
+          <h2 id="recent-title">Pagos recientes</h2>
+          <div class="au-table-wrap au-only-desktop">
+            <table class="au-table">
+              <caption class="au-visually-hidden">
+                Pagos recientes
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Destinatario</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Comprobante</th>
+                  <th scope="col" class="au-cell-amount">Recibe</th>
+                  <th scope="col" class="au-cell-amount">Sale de la cuenta</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (payout of others(); track payout.id) {
+                  <tr>
+                    <td class="nowrap">{{ payout.createdAt | auDateTime }}</td>
+                    <td>
+                      <a [routerLink]="['/pagos', payout.id]">{{ recipientName(payout) }}</a>
+                    </td>
+                    <td>
+                      <au-status-badge
+                        [label]="badge(payout).label"
+                        [tone]="badge(payout).tone"
+                        [technicalValue]="payout.rawStatus"
+                      />
+                    </td>
+                    <td class="au-mono">{{ payout.referenceNumber ?? '—' }}</td>
+                    <td class="au-cell-amount">{{ payout.amount | auMoney: payout.currency }}</td>
+                    <td class="au-cell-amount">{{ payout.totalDebitAmount | auMoney: payout.currency }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <ul class="au-stack au-only-mobile" aria-label="Pagos recientes">
+            @for (payout of others(); track payout.id) {
+              <li>
+                <a class="mobile-row" [routerLink]="['/pagos', payout.id]">
+                  <span class="who">
+                    <span class="name">{{ recipientName(payout) }}</span>
+                    <au-status-badge [label]="badge(payout).label" [tone]="badge(payout).tone" />
+                  </span>
+                  <span class="amount au-num">{{ payout.amount | auMoney: payout.currency }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      @if (all().length >= limit) {
+        <p class="meta scope">Se muestran los {{ limit }} pagos más recientes preparados en este portal.</p>
+      }
+    }
+  }
+}

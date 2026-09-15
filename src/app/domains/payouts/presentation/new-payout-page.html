@@ -1,0 +1,232 @@
+<nav class="crumbs" aria-label="Ruta">
+  <a routerLink="/pagos">Pagos</a>
+  <span aria-hidden="true">/</span>
+  <span aria-current="page">Nuevo pago</span>
+</nav>
+
+<au-page-header
+  title="Nuevo pago"
+  description="Primero se cotiza para cerrar el precio; después se prepara y otra persona lo aprueba antes de enviarlo."
+/>
+
+<ol class="steps" aria-label="Pasos">
+  <li [class.current]="!quotation()" [attr.aria-current]="!quotation() ? 'step' : null">1. Datos</li>
+  <li [class.current]="quotation()" [attr.aria-current]="quotation() ? 'step' : null">2. Cotización y confirmación</li>
+  <li>3. Aprobación por otra persona</li>
+</ol>
+
+@if (!onboardingLoaded() || loadingData()) {
+  <au-skeleton height="240px" />
+} @else if (!treasuryEnabled()) {
+  <section class="au-empty" aria-labelledby="payout-gate">
+    <h2 id="payout-gate">Todavía no se pueden preparar pagos</h2>
+    <p>Preparar pagos requiere que el proveedor bancario haya aprobado la vinculación de la empresa.</p>
+    <a class="au-button au-button--secondary" routerLink="/vinculacion">Ver vinculación</a>
+  </section>
+} @else if (loadError(); as failure) {
+  <au-error-state [error]="failure" (retry)="accounts.loadList(); recipients.loadList()" />
+} @else if (!quotation()) {
+  <form class="form" [formGroup]="form" (ngSubmit)="requestQuote()" novalidate>
+    @if (quoteError(); as failure) {
+      <au-error-state class="error" [error]="failure" />
+    }
+
+    <div class="au-field">
+      <label class="au-label" for="payout-account">Cuenta de origen</label>
+      @if (accountOptions().length === 0) {
+        <p class="au-notice" id="payout-account">
+          No hay cuentas operativas. Una cuenta necesita estar habilitada por el banco para mover fondos.
+          <a routerLink="/cuentas">Ver cuentas</a>
+        </p>
+      } @else {
+        <select
+          id="payout-account"
+          class="au-input"
+          formControlName="accountId"
+          [attr.aria-invalid]="invalid('accountId')"
+          [attr.aria-describedby]="excludedAccounts() ? 'account-help' : null"
+        >
+          <option value="" disabled>Selecciona una cuenta</option>
+          @for (account of accountOptions(); track account.id) {
+            <option [value]="account.id">{{ account.label }}</option>
+          }
+        </select>
+        @if (excludedAccounts()) {
+          <p class="au-help" id="account-help">{{ excludedAccounts() }} cuenta(s) no operativa(s) no se muestran.</p>
+        }
+        @if (invalid('accountId')) {
+          <p class="au-field-error">Elige la cuenta de origen.</p>
+        }
+      }
+    </div>
+
+    <div class="au-field">
+      <label class="au-label" for="payout-recipient">Destinatario</label>
+      @if (recipientOptions().length === 0) {
+        <p class="au-notice" id="payout-recipient">
+          No hay destinatarios activos registrados en el proveedor.
+          <a routerLink="/destinatarios">Ver destinatarios</a>
+        </p>
+      } @else {
+        <select
+          id="payout-recipient"
+          class="au-input"
+          formControlName="recipientId"
+          [attr.aria-invalid]="invalid('recipientId')"
+          [attr.aria-describedby]="excludedRecipients() ? 'recipient-help' : null"
+        >
+          <option value="" disabled>Selecciona un destinatario</option>
+          @for (recipient of recipientOptions(); track recipient.id) {
+            <option [value]="recipient.id">
+              {{ recipient.name }} · {{ recipient.rail }} {{ recipient.maskedDestination ?? '' }}
+            </option>
+          }
+        </select>
+        @if (excludedRecipients()) {
+          <p class="au-help" id="recipient-help">
+            {{ excludedRecipients() }} destinatario(s) sin registrar en el proveedor no se muestran.
+          </p>
+        }
+        @if (invalid('recipientId')) {
+          <p class="au-field-error">Elige el destinatario.</p>
+        }
+      }
+    </div>
+
+    @if (railOptions().length > 1) {
+      <fieldset class="au-field">
+        <legend class="au-label">Velocidad</legend>
+        <div class="au-choice">
+          <label><input type="radio" formControlName="rail" value="" />Según destinatario</label>
+          @for (rail of railOptions(); track rail) {
+            <label><input type="radio" formControlName="rail" [value]="rail" />{{ railLabels[rail] }}</label>
+          }
+        </div>
+      </fieldset>
+    }
+
+    <div class="au-field">
+      <label class="au-label" for="payout-amount">Importe que recibe el destinatario</label>
+      <input
+        id="payout-amount"
+        class="au-input au-num amount"
+        type="number"
+        inputmode="decimal"
+        min="0.01"
+        step="0.01"
+        formControlName="amount"
+        [attr.aria-invalid]="invalid('amount')"
+        aria-describedby="amount-help"
+      />
+      <p class="au-help" id="amount-help">
+        Las comisiones se suman por encima: la cotización mostrará el total que sale de la cuenta.
+      </p>
+      @if (invalid('amount')) {
+        <p class="au-field-error">Escribe un importe mayor que cero.</p>
+      }
+    </div>
+
+    <div class="actions">
+      <a class="au-button au-button--secondary" routerLink="/pagos">Cancelar</a>
+      <button
+        type="submit"
+        class="au-button au-button--primary"
+        [disabled]="preparation.busy() === 'quote' || accountOptions().length === 0 || recipientOptions().length === 0"
+        [attr.aria-busy]="preparation.busy() === 'quote'"
+      >
+        {{ preparation.busy() === 'quote' ? 'Cotizando…' : 'Cotizar' }}
+      </button>
+    </div>
+  </form>
+} @else {
+  @if (quotation(); as quote) {
+    <section class="quote" aria-labelledby="quote-title">
+      <div class="quote-head">
+        <h2 id="quote-title">Revisa antes de preparar el pago</h2>
+        <p class="timer" [class.expired]="seconds() === 0" role="timer" aria-live="off">
+          @if (seconds() > 0) {
+            Precio vigente <span class="au-num">{{ countdown() }}</span>
+          } @else {
+            Cotización vencida
+          }
+        </p>
+      </div>
+
+      <dl class="breakdown">
+        <div>
+          <dt>Recibe {{ recipientName(quote.recipientId) }}</dt>
+          <dd class="au-num">{{ quote.destinationAmount | auMoney: quote.destinationCurrency }}</dd>
+        </div>
+        <div>
+          <dt>Comisión del proveedor</dt>
+          <dd class="au-num">{{ quote.providerFee | auMoney: quote.destinationCurrency }}</dd>
+        </div>
+        <div>
+          <dt>Comisión de la plataforma</dt>
+          <dd class="au-num">{{ quote.platformFee | auMoney: quote.destinationCurrency }}</dd>
+        </div>
+        @if (quote.exchangeRate !== null) {
+          <div>
+            <dt>Tasa de cambio</dt>
+            <dd class="au-num">{{ quote.exchangeRate }}</dd>
+          </div>
+        }
+        <div class="total">
+          <dt>Sale de {{ accountName(quote.virtualAccountId) }}</dt>
+          <dd class="au-num">{{ quote.totalDebitAmount | auMoney: quote.destinationCurrency }}</dd>
+        </div>
+      </dl>
+      <p class="meta">Riel: {{ railLabels[quote.rail] ?? quote.rail }}</p>
+
+      @if (!quote.balanceSufficient) {
+        <p class="au-notice au-notice--attention" role="alert">
+          La cuenta no tiene saldo suficiente para este pago. Consulta el saldo o elige otra cuenta.
+        </p>
+      }
+      @if (quote.fallbackRate) {
+        <p class="au-notice" role="note">El proveedor calculó esta cotización con una tasa de contingencia.</p>
+      }
+      @if (!quote.destinationCurrency) {
+        <p class="au-notice au-notice--attention" role="alert">
+          La cotización no informa la moneda de destino: no se puede preparar el pago con ella.
+        </p>
+      }
+      @if (createError(); as failure) {
+        <au-error-state class="error" [error]="failure" />
+      }
+
+      <div class="actions">
+        <button
+          type="button"
+          class="au-button au-button--secondary"
+          [disabled]="preparation.busy() !== null"
+          (click)="editData()"
+        >
+          Cambiar datos
+        </button>
+        @if (seconds() === 0) {
+          <button
+            type="button"
+            class="au-button au-button--primary"
+            [disabled]="preparation.busy() !== null"
+            [attr.aria-busy]="preparation.busy() === 'quote'"
+            (click)="requestQuote()"
+          >
+            {{ preparation.busy() === 'quote' ? 'Cotizando…' : 'Recotizar' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="au-button au-button--primary"
+            [disabled]="!redeemable() || preparation.busy() !== null"
+            [attr.aria-busy]="preparation.busy() === 'create'"
+            (click)="preparePayout()"
+          >
+            {{ preparation.busy() === 'create' ? 'Preparando…' : 'Preparar pago' }}
+          </button>
+        }
+      </div>
+      <p class="meta">Preparar no envía dinero: el pago queda pendiente hasta que otra persona lo apruebe.</p>
+    </section>
+  }
+}

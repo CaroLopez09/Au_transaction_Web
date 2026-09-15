@@ -1,0 +1,247 @@
+.crumbs {
+  display: flex;
+  gap: var(--au-space-2);
+  margin-bottom: var(--au-space-4);
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.crumbs a {
+  color: var(--au-text-body);
+}
+
+.prepared,
+.blocked,
+.action-error {
+  margin-bottom: var(--au-space-5);
+}
+
+.blocked a {
+  margin-left: var(--au-space-2);
+  color: inherit;
+  font-weight: 500;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--au-space-6);
+  align-items: start;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--au-space-2);
+}
+
+.explanation {
+  margin-top: var(--au-space-3);
+}
+
+.amounts {
+  margin: var(--au-space-6) 0 0;
+  padding: var(--au-space-6);
+  border-radius: var(--au-radius-lg);
+  background: var(--au-canvas-ledger);
+}
+
+.amounts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--au-space-4);
+  padding: var(--au-space-2) 0;
+}
+
+.amounts dt {
+  color: var(--au-text-warm);
+}
+
+.amounts dd {
+  margin: 0;
+  color: var(--au-primary);
+  text-align: right;
+}
+
+.amounts .main {
+  font-size: var(--au-fs-section);
+}
+
+.amounts .total {
+  margin-top: var(--au-space-3);
+  padding-top: var(--au-space-4);
+  border-top: 1px solid var(--au-hairline);
+}
+
+.amounts .total dd {
+  font-size: var(--au-fs-amount);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.decision {
+  margin-top: var(--au-space-6);
+}
+
+.decision-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--au-space-2);
+  margin-top: var(--au-space-4);
+}
+
+.section-title {
+  margin-bottom: var(--au-space-3);
+  font-size: var(--au-fs-body);
+  font-weight: 500;
+}
+
+.sub {
+  display: block;
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-caption);
+}
+
+.meta {
+  margin-top: var(--au-space-2);
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.timeline {
+  margin-top: var(--au-space-10);
+}
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.events li {
+  position: relative;
+  display: flex;
+  gap: var(--au-space-4);
+  padding-bottom: var(--au-space-5);
+}
+
+.events li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: 0;
+  width: 1px;
+  background: var(--au-hairline);
+}
+
+.dot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin-top: 5px;
+  border-radius: 50%;
+  border: 2px solid var(--au-primary);
+  background: var(--au-canvas);
+}
+
+.event-status {
+  color: var(--au-primary);
+  font-weight: 500;
+}
+
+.confirm-amounts {
+  margin: 0 0 var(--au-space-4);
+}
+
+.confirm-amounts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--au-space-4);
+  padding: var(--au-space-2) 0;
+  border-bottom: 1px solid var(--au-hairline);
+}
+
+.confirm-amounts dd {
+  margin: 0;
+  color: var(--au-primary);
+  white-space: nowrap;
+}
+
+.confirm-amounts .strong {
+  font-weight: 500;
+}
+
+.irreversible {
+  margin-bottom: var(--au-space-5);
+}
+
+.documents {
+  list-style: none;
+  margin: 0 0 var(--au-space-3);
+  padding: 0;
+}
+
+.documents li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--au-space-3);
+  padding: var(--au-space-2) 0;
+  border-bottom: 1px solid var(--au-hairline);
+  font-size: var(--au-fs-data);
+}
+
+.uploads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--au-space-2);
+}
+
+.upload {
+  position: relative;
+  overflow: hidden;
+}
+
+.upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload:has(input:focus-visible) {
+  outline: 2px solid var(--au-primary);
+  outline-offset: 2px;
+}
+
+.reject-form {
+  margin-top: var(--au-space-4);
+}
+
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--au-space-2);
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 639px) {
+  .amounts {
+    padding: var(--au-space-4);
+  }
+
+  .amounts .total {
+    flex-direction: column;
+  }
+
+  .amounts .total dd {
+    text-align: left;
+  }
+}

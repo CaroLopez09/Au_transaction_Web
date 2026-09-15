@@ -1,0 +1,137 @@
+.crumbs {
+  display: flex;
+  gap: var(--au-space-2);
+  margin-bottom: var(--au-space-4);
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.crumbs a {
+  color: var(--au-text-body);
+}
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--au-space-2) var(--au-space-4);
+  margin-bottom: var(--au-space-6);
+}
+
+.status-line p {
+  max-width: 70ch;
+}
+
+.action-error {
+  margin-bottom: var(--au-space-5);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--au-space-6);
+  align-items: stretch;
+}
+
+.section-title {
+  font-size: var(--au-fs-body);
+  font-weight: 500;
+  margin-bottom: var(--au-space-3);
+}
+
+.balance .amount {
+  font-size: var(--au-fs-amount);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--au-primary);
+}
+
+.balance .au-button {
+  margin-top: var(--au-space-5);
+}
+
+.meta {
+  margin-top: var(--au-space-2);
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.instructions {
+  padding: var(--au-space-6);
+  border-radius: var(--au-radius-lg);
+  background: var(--au-canvas-ledger);
+}
+
+.instructions dl {
+  margin: 0;
+  display: grid;
+  gap: var(--au-space-4);
+}
+
+.instructions dt {
+  font-size: var(--au-fs-caption);
+  color: var(--au-text-warm);
+}
+
+.instructions dd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--au-space-2);
+  margin: 2px 0 0;
+  color: var(--au-primary);
+}
+
+.instructions .value {
+  font-size: var(--au-fs-section);
+  letter-spacing: 0.02em;
+}
+
+.details,
+.deposits {
+  margin-top: var(--au-space-6);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--au-space-3);
+  margin-bottom: var(--au-space-3);
+}
+
+.section-head .section-title {
+  margin-bottom: 0;
+}
+
+.head-actions {
+  display: flex;
+  gap: var(--au-space-2);
+}
+
+.empty {
+  padding: var(--au-space-4) 0;
+}
+
+.sandbox {
+  margin-bottom: var(--au-space-5);
+}
+
+.amount-input {
+  max-width: 200px;
+  text-align: right;
+}
+
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--au-space-2);
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

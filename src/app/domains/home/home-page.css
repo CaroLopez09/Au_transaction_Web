@@ -1,0 +1,140 @@
+:host {
+  display: block;
+  max-width: 880px;
+}
+
+.intro {
+  margin-bottom: var(--au-space-10);
+}
+
+.intro h1 {
+  font-size: var(--au-fs-page);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.intro p {
+  margin-top: var(--au-space-2);
+  color: var(--au-text-muted);
+}
+
+.attention {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--au-space-6);
+  padding: var(--au-space-8);
+  border-radius: var(--au-radius-lg);
+  background: var(--au-canvas-ledger);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Ondas de líneas finas de la gráfica complementaria AU, como marca de agua. */
+.attention::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% -35% 35%;
+  height: 160%;
+  background: url('/brand/waves-lines.svg') no-repeat right bottom / contain;
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.attention.calm {
+  background: var(--au-canvas);
+  border: 1px solid var(--au-hairline);
+}
+
+.attention.placeholder {
+  display: grid;
+  gap: var(--au-space-3);
+}
+
+.attention-body {
+  max-width: 56ch;
+}
+
+.attention h2 {
+  margin: var(--au-space-4) 0 var(--au-space-2);
+  font-size: var(--au-fs-section);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.attention p {
+  color: var(--au-text-body);
+}
+
+.overview {
+  margin-top: var(--au-space-12);
+}
+
+.overview h2 {
+  font-size: var(--au-fs-section);
+  margin-bottom: var(--au-space-3);
+}
+
+dl {
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--au-space-4);
+  min-height: 56px;
+  padding: var(--au-space-3) 0;
+  border-top: 1px solid var(--au-hairline);
+}
+
+.row:last-child {
+  border-bottom: 1px solid var(--au-hairline);
+}
+
+dt {
+  color: var(--au-text-muted);
+}
+
+dd {
+  margin: 0;
+  color: var(--au-primary);
+}
+
+dd a {
+  color: var(--au-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+dd a:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--au-text-muted);
+}
+
+@media (max-width: 767px) {
+  .intro {
+    margin-bottom: var(--au-space-6);
+  }
+
+  .attention {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--au-space-6) var(--au-space-5);
+  }
+
+  .attention .au-button {
+    align-self: flex-start;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: var(--au-space-1);
+  }
+}

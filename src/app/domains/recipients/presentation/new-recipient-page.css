@@ -1,0 +1,144 @@
+:host {
+  display: block;
+  max-width: 760px;
+}
+
+.crumbs {
+  display: flex;
+  gap: var(--au-space-2);
+  margin-bottom: var(--au-space-4);
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.crumbs a {
+  color: var(--au-text-body);
+}
+
+.gate {
+  margin-bottom: var(--au-space-6);
+}
+
+.gate a {
+  margin-left: var(--au-space-2);
+  color: var(--au-text-warm);
+  font-weight: 500;
+}
+
+.error-summary {
+  display: flex;
+  gap: var(--au-space-3);
+  margin-bottom: var(--au-space-6);
+  padding: var(--au-space-4);
+  border: 1px solid var(--au-critical);
+  border-radius: var(--au-radius-sm);
+  font-size: var(--au-fs-data);
+}
+
+.error-summary au-icon {
+  color: var(--au-critical);
+}
+
+.error-title {
+  color: var(--au-critical-text);
+  font-weight: 500;
+}
+
+.group + .group {
+  margin-top: var(--au-space-8);
+  padding-top: var(--au-space-6);
+  border-top: 1px solid var(--au-hairline);
+}
+
+h2 {
+  margin-bottom: var(--au-space-4);
+  font-size: var(--au-fs-body);
+  font-weight: 500;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--au-space-4);
+}
+
+.rails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--au-space-3);
+}
+
+.rail-option {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: var(--au-space-4);
+  border: 1px solid var(--au-border-control);
+  border-radius: var(--au-radius-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--au-dur-fast) var(--au-ease-out),
+    background-color var(--au-dur-fast) var(--au-ease-out);
+}
+
+.rail-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rail-option:has(input:checked) {
+  border-color: var(--au-primary);
+  box-shadow: inset 0 0 0 1px var(--au-primary);
+  background: var(--au-canvas-ledger);
+}
+
+.rail-option:has(input:focus-visible) {
+  outline: 2px solid var(--au-primary);
+  outline-offset: 2px;
+}
+
+.rails.invalid .rail-option {
+  border-color: var(--au-critical);
+}
+
+.rail-name {
+  color: var(--au-primary);
+  font-weight: 500;
+}
+
+.rail-help {
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-caption);
+}
+
+.code {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.submit-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--au-space-2);
+  margin-top: var(--au-space-8);
+  padding-top: var(--au-space-6);
+  border-top: 1px solid var(--au-hairline);
+}
+
+@media (max-width: 639px) {
+  .pair,
+  .rails {
+    grid-template-columns: 1fr;
+  }
+
+  .submit-bar > * {
+    flex: 1;
+  }
+}
+
+.address-error {
+  margin: 0 0 var(--au-space-4);
+}
