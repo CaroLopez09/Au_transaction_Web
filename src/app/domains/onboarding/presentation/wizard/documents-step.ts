@@ -5,7 +5,7 @@ import { DateTimePipe } from '../../../../shared/ui/date-time.pipe';
 import { StatusBadge } from '../../../../shared/ui/status-badge';
 import { toDate } from '../../../../shared/utilities/dates';
 import { OnboardingWizardFacade } from '../../application/onboarding-wizard.facade';
-import { COMPANY_RECORDS, CompanyRecord } from '../../domain/kyb-catalog';
+import { CompanyRecord, companyRecordsFor } from '../../domain/kyb-catalog';
 import { AttachDocuments } from '../../domain/onboarding.repository';
 import { DocumentUploadDrawer, UploadTarget } from './document-upload-drawer';
 import { StepGaps } from './step-gaps';
@@ -27,7 +27,7 @@ import { StepGaps } from './step-gaps';
     <p class="au-visually-hidden" aria-live="polite">{{ announcement() }}</p>
 
     <ul class="records">
-      @for (record of records; track record.informationType) {
+      @for (record of records(); track record.informationType) {
         <li>
           <div class="body">
             <p class="title">{{ record.label }}</p>
@@ -124,7 +124,7 @@ export class DocumentsStep {
 
   protected readonly wizard = inject(OnboardingWizardFacade);
   private readonly session = inject(SessionStore);
-  protected readonly records = COMPANY_RECORDS;
+  protected readonly records = computed(() => companyRecordsFor(this.wizard.draft().company.formation_country));
   protected readonly canManage = computed(() => this.session.can('onboarding.manage'));
   protected readonly target = signal<UploadTarget | null>(null);
   protected readonly error = signal<UserFacingError | null>(null);

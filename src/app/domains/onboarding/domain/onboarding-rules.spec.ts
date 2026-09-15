@@ -1,3 +1,4 @@
+import { companyRecordsFor } from './kyb-catalog';
 import { maskDocument, OwnershipRoster, qualifiesAsBeneficialOwner, rosterWarnings } from './beneficial-owner';
 import { onboardingSteps } from './onboarding-progress';
 import { canRefreshFromProvider, OnboardingStatus, onboardingStage } from './onboarding-status';
@@ -111,5 +112,16 @@ describe('beneficiario final y avisos del grupo (reglas de Ubo y UboRoster del B
       'ownership-over-100',
     ]);
     expect(rosterWarnings(roster({ members: [member], totalOwnership: 100, hasBeneficialOwner: true }))).toEqual([]);
+  });
+});
+
+describe('documentos de empresa según el país de constitución', () => {
+  const ein = (country: string) => companyRecordsFor(country).some((record) => record.informationType === 'ein_letter');
+
+  it('la carta de EIN solo se ofrece a empresas de EE. UU. o sin país todavía', () => {
+    expect(ein('USA')).toBe(true);
+    expect(ein('')).toBe(true);
+    expect(ein('col')).toBe(false);
+    expect(ein('MEX')).toBe(false);
   });
 });

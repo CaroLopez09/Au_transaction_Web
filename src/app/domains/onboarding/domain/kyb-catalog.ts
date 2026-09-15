@@ -50,7 +50,10 @@ export const INDUSTRIES: readonly Option[] = [
   { value: 'amusement_gambling_recreation_industries', label: 'Entretenimiento, juegos de azar y recreación' },
   { value: 'computer_electronic_product_manufacturing', label: 'Equipos de cómputo y electrónicos' },
   { value: 'transportation_equipment_manufacturing', label: 'Equipos de transporte' },
-  { value: 'electrical_equipment_appliance_component_manufacturing', label: 'Equipos, aparatos y componentes eléctricos' },
+  {
+    value: 'electrical_equipment_appliance_component_manufacturing',
+    label: 'Equipos, aparatos y componentes eléctricos',
+  },
   { value: 'gasoline_stations', label: 'Estaciones de gasolina' },
   { value: 'oil_gas_extraction', label: 'Extracción de petróleo y gas' },
   { value: 'funds_trusts_other_financial_vehicles', label: 'Fondos, fideicomisos y otros vehículos financieros' },
@@ -67,13 +70,19 @@ export const INDUSTRIES: readonly Option[] = [
   { value: 'machinery_manufacturing', label: 'Maquinaria' },
   { value: 'building_material_garden_equipment_supplies_dealers', label: 'Materiales de construcción y jardinería' },
   { value: 'couriers_messengers', label: 'Mensajería y paquetería' },
-  { value: 'wholesale_electronic_markets_agents_brokers', label: 'Mercados mayoristas electrónicos, agentes y corredores' },
+  {
+    value: 'wholesale_electronic_markets_agents_brokers',
+    label: 'Mercados mayoristas electrónicos, agentes y corredores',
+  },
   { value: 'primary_metal_manufacturing', label: 'Metales básicos' },
   { value: 'mining_except_oil_gas', label: 'Minería (excepto petróleo y gas)' },
   { value: 'furniture_related_product_manufacturing', label: 'Muebles y productos relacionados' },
   { value: 'museums_historical_sites', label: 'Museos y sitios históricos' },
   { value: 'heavy_civil_engineering_construction', label: 'Obras de ingeniería civil' },
-  { value: 'religious_grantmaking_civic_professional_organizations', label: 'Organizaciones religiosas, cívicas y profesionales' },
+  {
+    value: 'religious_grantmaking_civic_professional_organizations',
+    label: 'Organizaciones religiosas, cívicas y profesionales',
+  },
   { value: 'miscellaneous_manufacturing', label: 'Otras industrias manufactureras' },
   { value: 'miscellaneous_store_retailers', label: 'Otros comercios al por menor' },
   { value: 'other_information_services', label: 'Otros servicios de información' },
@@ -116,7 +125,10 @@ export const INDUSTRIES: readonly Option[] = [
   { value: 'pipeline_transportation', label: 'Transporte por ductos' },
   { value: 'transit_ground_passenger_transportation', label: 'Transporte terrestre de pasajeros' },
   { value: 'scenic_sightseeing_transportation', label: 'Transporte turístico' },
-  { value: 'securities_commodity_contracts_financial_investments', label: 'Valores, materias primas e inversiones financieras' },
+  {
+    value: 'securities_commodity_contracts_financial_investments',
+    label: 'Valores, materias primas e inversiones financieras',
+  },
   { value: 'motor_vehicle_parts_dealers', label: 'Vehículos y autopartes' },
 ];
 
@@ -174,6 +186,8 @@ export interface CompanyRecord {
   readonly hasNumber: boolean;
   /** Si el registro admite varios tipos documentados (identificadores fiscales por país). */
   readonly typeOptions?: readonly Option[];
+  /** Solo para empresas constituidas en EE. UU. (el proveedor: EIN «do NOT send for non-US businesses»). */
+  readonly usOnly?: boolean;
 }
 
 export const COMPANY_RECORDS: readonly CompanyRecord[] = [
@@ -239,6 +253,7 @@ export const COMPANY_RECORDS: readonly CompanyRecord[] = [
     label: 'Carta de EIN (EE. UU.)',
     help: 'La carta de identificación fiscal emitida a la empresa en EE. UU.',
     hasNumber: true,
+    usOnly: true,
   },
   {
     informationType: 'tax_id',
@@ -297,4 +312,11 @@ export function kybFilesProblem(files: readonly { name: string; type: string; si
     return 'Los archivos superan 7 MB en total. Súbelos en varias tandas.';
   }
   return null;
+}
+
+/** Registros que aplican a la empresa según su país de constitución (ISO-3; vacío mientras no se sepa). */
+export function companyRecordsFor(formationCountry: string): readonly CompanyRecord[] {
+  const country = formationCountry.trim().toUpperCase();
+  const outsideUs = /^[A-Z]{3}$/.test(country) && country !== 'USA';
+  return outsideUs ? COMPANY_RECORDS.filter((record) => !record.usOnly) : COMPANY_RECORDS;
 }
