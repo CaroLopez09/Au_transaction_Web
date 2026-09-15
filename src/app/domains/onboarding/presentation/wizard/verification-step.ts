@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { SessionStore } from '../../../../core/auth/session.store';
 import { UserFacingError } from '../../../../core/http/error-mapping';
+import { ConsentCheck } from '../../../../shared/ui/consent-check';
 import { DateTimePipe } from '../../../../shared/ui/date-time.pipe';
 import { ErrorState } from '../../../../shared/ui/error-state';
 import { Icon } from '../../../../shared/ui/icon';
@@ -17,7 +18,7 @@ import { StepGaps } from './step-gaps';
 @Component({
   selector: 'au-verification-step',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [OnboardingSteps, StepGaps, StatusBadge, DateTimePipe, ErrorState, Icon],
+  imports: [OnboardingSteps, StepGaps, StatusBadge, DateTimePipe, ErrorState, Icon, ConsentCheck],
   template: `
     @if (status(); as current) {
       <au-onboarding-steps [steps]="steps()" />
@@ -61,10 +62,14 @@ import { StepGaps } from './step-gaps';
         }
         @if (canManage()) {
           @if (current.verificationTriggered || current.status !== 'CREATED') {
+            <au-consent-check [(checked)]="biometricConsent">
+              Cada beneficiario final autorizó el tratamiento de sus datos biométricos (imagen facial) para la prueba de
+              vida con el proveedor bancario.
+            </au-consent-check>
             <button
               type="button"
               class="au-button au-button--secondary"
-              [disabled]="wizard.busy() !== null"
+              [disabled]="wizard.busy() !== null || !biometricConsent()"
               [attr.aria-busy]="wizard.busy() === 'liveness'"
               (click)="requestLinks()"
             >
@@ -133,6 +138,7 @@ export class VerificationStep {
   protected readonly canManage = computed(() => this.session.can('onboarding.manage'));
   protected readonly liveness = livenessCopy;
   protected readonly error = signal<UserFacingError | null>(null);
+  protected readonly biometricConsent = signal(false);
   protected readonly owners = computed(() =>
     (dataOf(this.onboarding.roster())?.members ?? []).filter((owner) => owner.beneficialOwner),
   );

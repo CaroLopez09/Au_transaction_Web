@@ -109,3 +109,10 @@ export interface RegisterBusinessDto {
   email: string;
   sourceOfFunds: string;
 }
+
+/** application/tenant/SubmitOnboardingService.TermsView */
+export interface TermsViewDto {
+  version: string | null;
+  url: string | null;
+  acceptedVersion: string | null;
+}

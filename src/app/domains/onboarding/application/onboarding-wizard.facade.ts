@@ -13,7 +13,7 @@ import {
   toProfile,
 } from '../domain/onboarding-draft';
 import { OnboardingStatus } from '../domain/onboarding-status';
-import { AttachDocuments, OnboardingRepository } from '../domain/onboarding.repository';
+import { AttachDocuments, OnboardingRepository, ProviderTerms } from '../domain/onboarding.repository';
 import { OnboardingFacade } from './onboarding.facade';
 
 export type WizardAction =
@@ -22,6 +22,7 @@ export type WizardAction =
   | 'profile'
   | 'sync-owners'
   | 'liveness'
+  | 'terms'
   | `company-documents:${string}`
   | `owner-documents:${string}`;
 
@@ -41,6 +42,7 @@ export class OnboardingWizardFacade {
   private readonly savedAtState = signal<Date | null>(null);
   private readonly busyState = signal<WizardAction | null>(null);
   private readonly saveErrorState = signal<UserFacingError | null>(null);
+  private readonly termsState = signal<ProviderTerms | null>(null);
 
   readonly draft = this.draftState.asReadonly();
   readonly loaded = this.loadedState.asReadonly();
@@ -51,9 +53,12 @@ export class OnboardingWizardFacade {
   readonly busy = this.busyState.asReadonly();
   readonly saveError = this.saveErrorState.asReadonly();
   readonly registrationGaps = computed(() => registrationGaps(this.draftState()));
+  /** Términos vigentes; `null` mientras no se han leído o si la lectura falló (el envío lo vuelve a exigir el BFF). */
+  readonly terms = this.termsState.asReadonly();
 
   async load(): Promise<void> {
     this.loadedState.set('loading');
+    void this.loadTerms();
     const result = await fetchRemote(this.repository.draft());
     if (result.status === 'success') {
       this.draftState.set(result.data.draft);
@@ -63,6 +68,30 @@ export class OnboardingWizardFacade {
     } else if (result.status === 'error') {
       this.loadErrorState.set(result.error);
       this.loadedState.set('error');
+    }
+  }
+
+  private async loadTerms(): Promise<void> {
+    const result = await fetchRemote(this.repository.terms());
+    if (result.status === 'success') {
+      this.termsState.set(result.data);
+    }
+  }
+
+  /** Acepta la versión vigente de los términos (POST /api/onboarding/terms). */
+  async acceptTerms(version: string): Promise<ActionResult<ProviderTerms> | null> {
+    if (this.busyState()) {
+      return null;
+    }
+    this.busyState.set('terms');
+    try {
+      const result = await runAction(this.repository.acceptTerms(version));
+      if (result.ok) {
+        this.termsState.set(result.value);
+      }
+      return result;
+    } finally {
+      this.busyState.set(null);
     }
   }
 

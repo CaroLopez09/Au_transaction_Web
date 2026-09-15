@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserFacingError } from '../../../../core/http/error-mapping';
 import { CountryInput } from '../../../../shared/reference/country-input';
+import { ConsentCheck } from '../../../../shared/ui/consent-check';
 import { Drawer } from '../../../../shared/ui/drawer';
 import { ErrorState } from '../../../../shared/ui/error-state';
 import { CompanyRecord, kybFilesProblem, PERSON_ID_TYPES, requiresBackSide } from '../../domain/kyb-catalog';
@@ -27,7 +28,7 @@ interface Slot {
 @Component({
   selector: 'au-document-upload-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Drawer, ReactiveFormsModule, CountryInput, ErrorState],
+  imports: [Drawer, ReactiveFormsModule, CountryInput, ErrorState, ConsentCheck],
   template: `
     <au-drawer [open]="true" [heading]="heading()" [busy]="busy()" (closeRequested)="closed.emit()">
       <form id="kyb-upload-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -130,6 +131,14 @@ interface Slot {
             }
           </div>
         }
+        @if (hasSelfie()) {
+          <au-consent-check [(checked)]="biometricConsent">
+            {{ ownerName() }} autorizó el tratamiento de su imagen facial para compararla con su documento.
+          </au-consent-check>
+          @if (submitted() && !biometricConsent()) {
+            <p class="au-field-error" role="alert">Confirma el consentimiento para enviar la selfie.</p>
+          }
+        }
         @if (filesError(); as message) {
           <p class="au-field-error" role="alert">{{ message }}</p>
         }
@@ -229,6 +238,12 @@ export class DocumentUploadDrawer implements OnInit {
   protected readonly submitted = signal(false);
   protected readonly files = signal<readonly DocumentFile[]>([]);
   protected readonly filesError = signal<string | null>(null);
+  protected readonly biometricConsent = signal(false);
+  protected readonly hasSelfie = computed(() => this.files().some((document) => document.role === 'selfie'));
+  protected readonly ownerName = computed(() => {
+    const target = this.target();
+    return target.kind === 'owner' ? target.ownerName : '';
+  });
 
   protected readonly companyRecord = computed(() => {
     const target = this.target();
@@ -300,7 +315,7 @@ export class DocumentUploadDrawer implements OnInit {
       ? `Falta: ${missing.label.toLowerCase()}.`
       : kybFilesProblem(this.files().map((document) => document.file));
     this.filesError.set(problem);
-    if (this.form.invalid || problem) {
+    if (this.form.invalid || problem || (this.hasSelfie() && !this.biometricConsent())) {
       return;
     }
     const value = this.form.getRawValue();
@@ -312,6 +327,7 @@ export class DocumentUploadDrawer implements OnInit {
       number: this.showNumber() ? value.number || null : null,
       expiration: this.target().kind === 'owner' ? value.expiration || null : null,
       files: this.files().filter((document) => slotsInUse.has(document.role)),
+      biometricConsent: this.hasSelfie() && this.biometricConsent(),
     });
   }
 }

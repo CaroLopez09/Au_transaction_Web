@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { SessionStore } from '../../../../core/auth/session.store';
 import { UserFacingError } from '../../../../core/http/error-mapping';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog';
+import { ConsentCheck } from '../../../../shared/ui/consent-check';
 import { ErrorState } from '../../../../shared/ui/error-state';
 import { Icon } from '../../../../shared/ui/icon';
 import { OnboardingWizardFacade } from '../../application/onboarding-wizard.facade';
 import { OnboardingStatus } from '../../domain/onboarding-status';
 import { WizardStep } from '../../domain/onboarding-draft';
+import { termsPending } from '../../domain/onboarding.repository';
 
 export interface SectionSummary {
   readonly step: WizardStep;
@@ -17,7 +19,7 @@ export interface SectionSummary {
 @Component({
   selector: 'au-send-step',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ConfirmDialog, ErrorState, Icon],
+  imports: [ConfirmDialog, ConsentCheck, ErrorState, Icon],
   template: `
     <p class="intro">
       Revisa lo que falta antes de enviar. Puedes enviar con datos incompletos: el proveedor indicará qué más necesita.
@@ -58,17 +60,35 @@ export interface SectionSummary {
           Para crear el expediente en el proveedor hacen falta al menos: {{ registrationGaps().join(', ') }}.
         </p>
       }
+      @if (termsToAccept(); as terms) {
+        <au-consent-check [(checked)]="termsAccepted">
+          He leído y acepto
+          @if (terms.url) {
+            los <a [href]="terms.url" target="_blank" rel="noopener">términos y condiciones</a>
+          } @else {
+            los términos y condiciones
+          }
+          (versión {{ terms.version }}) en nombre de la empresa.
+        </au-consent-check>
+      }
       <div class="actions">
         <button
           type="button"
           class="au-button au-button--primary"
-          [disabled]="wizard.busy() !== null || (!registered() && registrationGaps().length > 0)"
+          [disabled]="
+            wizard.busy() !== null ||
+            (!registered() && registrationGaps().length > 0) ||
+            (termsToAccept() !== null && !termsAccepted())
+          "
           [attr.aria-busy]="wizard.busy() === 'register' || wizard.busy() === 'profile'"
           (click)="confirming.set(true)"
         >
           @switch (wizard.busy()) {
             @case ('register') {
               Creando expediente…
+            }
+            @case ('terms') {
+              Registrando la aceptación…
             }
             @case ('profile') {
               Enviando datos…
@@ -184,6 +204,12 @@ export class SendStep {
   protected readonly confirming = signal(false);
   protected readonly error = signal<UserFacingError | null>(null);
   protected readonly result = signal<string | null>(null);
+  protected readonly termsAccepted = signal(false);
+  /** Términos vigentes aún sin aceptar; `null` si no hay nada que aceptar. */
+  protected readonly termsToAccept = computed(() => {
+    const terms = this.wizard.terms();
+    return termsPending(terms) ? terms : null;
+  });
 
   protected async send(): Promise<void> {
     this.error.set(null);
@@ -202,6 +228,18 @@ export class SendStep {
       if (!created.ok) {
         this.confirming.set(false);
         this.error.set(created.error);
+        return;
+      }
+    }
+    const terms = this.termsToAccept();
+    if (terms?.version) {
+      const accepted = await this.wizard.acceptTerms(terms.version);
+      if (!accepted) {
+        return;
+      }
+      if (!accepted.ok) {
+        this.confirming.set(false);
+        this.error.set(accepted.error);
         return;
       }
     }

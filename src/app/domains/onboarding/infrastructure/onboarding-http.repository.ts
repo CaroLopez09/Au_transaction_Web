@@ -5,11 +5,18 @@ import { APP_CONFIG } from '../../../core/configuration/app-config';
 import { BeneficialOwner, OwnershipRoster, SaveBeneficialOwner } from '../domain/beneficial-owner';
 import { OnboardingStatus } from '../domain/onboarding-status';
 import { OnboardingDraft } from '../domain/onboarding-draft';
-import { AttachDocuments, OnboardingRepository, RegisterBusiness, SavedDraft } from '../domain/onboarding.repository';
+import {
+  AttachDocuments,
+  OnboardingRepository,
+  ProviderTerms,
+  RegisterBusiness,
+  SavedDraft,
+} from '../domain/onboarding.repository';
 import {
   OnboardingDraftViewDto,
   OnboardingViewDto,
   RegisterBusinessDto,
+  TermsViewDto,
   UboRosterDto,
   UboViewDto,
 } from './onboarding.dto';
@@ -18,6 +25,7 @@ import {
   toOnboardingStatus,
   toOwnershipRoster,
   toSavedDraft,
+  toProviderTerms,
   toSaveUboDto,
 } from './onboarding.mapper';
 
@@ -86,7 +94,18 @@ export class OnboardingHttpRepository extends OnboardingRepository {
   }
 
   requestLivenessLinks(): Observable<OwnershipRoster> {
-    return this.http.post<UboRosterDto>(`${this.baseUrl}/ubos/liveness-links`, null).pipe(map(toOwnershipRoster));
+    // La casilla de consentimiento es condición para llegar aquí; el BFF deja constancia.
+    return this.http
+      .post<UboRosterDto>(`${this.baseUrl}/ubos/liveness-links`, { biometricConsent: true })
+      .pipe(map(toOwnershipRoster));
+  }
+
+  terms(): Observable<ProviderTerms> {
+    return this.http.get<TermsViewDto>(`${this.baseUrl}/onboarding/terms`).pipe(map(toProviderTerms));
+  }
+
+  acceptTerms(version: string): Observable<ProviderTerms> {
+    return this.http.post<TermsViewDto>(`${this.baseUrl}/onboarding/terms`, { version }).pipe(map(toProviderTerms));
   }
 }
 
@@ -101,5 +120,6 @@ export function toDocumentsForm(command: AttachDocuments): FormData {
     form.append('files', document.file, document.file.name);
     form.append('types', document.role);
   }
+  if (command.biometricConsent) form.append('biometricConsent', 'true');
   return form;
 }

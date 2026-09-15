@@ -1,5 +1,7 @@
 import { OnboardingViewDto, UboRosterDto } from './onboarding.dto';
-import { toOnboardingStatus, toOwnershipRoster, toSaveUboDto } from './onboarding.mapper';
+import { termsPending } from '../domain/onboarding.repository';
+import { toDocumentsForm } from './onboarding-http.repository';
+import { toOnboardingStatus, toOwnershipRoster, toProviderTerms, toSaveUboDto } from './onboarding.mapper';
 
 /** Respuesta real de GET /api/onboarding (organización semilla, 14-sep-2026): sin kiraUserId por non_null. */
 const fixtureUnregisteredOnboarding: OnboardingViewDto = {
@@ -160,5 +162,24 @@ describe('toSaveUboDto', () => {
     expect(dto.gender).toBe('female');
     expect(dto.documentCountry).toBe('COL');
     expect(dto.address).toEqual({ streetName: 'Calle 1', city: 'Bogotá', country: 'COL' });
+  });
+});
+
+describe('términos y consentimiento biométrico', () => {
+  it('pide aceptar solo cuando hay una versión vigente distinta de la aceptada', () => {
+    expect(termsPending(toProviderTerms({ version: null, url: null, acceptedVersion: null }))).toBe(false);
+    expect(termsPending(toProviderTerms({ version: '2026-09', url: null, acceptedVersion: null }))).toBe(true);
+    expect(termsPending(toProviderTerms({ version: '2026-09', url: null, acceptedVersion: '2026-01' }))).toBe(true);
+    expect(termsPending(toProviderTerms({ version: '2026-09', url: null, acceptedVersion: '2026-09' }))).toBe(false);
+    expect(termsPending(null)).toBe(false);
+  });
+
+  it('el multipart declara el consentimiento solo si se dio', () => {
+    const file = new File(['x'], 'selfie.png', { type: 'image/png' });
+    const base = { informationType: 'passport', issuingCountry: 'col', number: null, expiration: null };
+    const conSelfie = toDocumentsForm({ ...base, files: [{ role: 'selfie', file }], biometricConsent: true });
+    const sinConsentimiento = toDocumentsForm({ ...base, files: [{ role: 'front', file }] });
+    expect(conSelfie.get('biometricConsent')).toBe('true');
+    expect(sinConsentimiento.has('biometricConsent')).toBe(false);
   });
 });

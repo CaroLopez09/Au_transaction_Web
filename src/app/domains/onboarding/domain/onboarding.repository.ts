@@ -30,8 +30,24 @@ export abstract class OnboardingRepository {
   abstract attachOwnerDocuments(ownerId: string, command: AttachDocuments): Observable<BeneficialOwner>;
   /** POST /api/ubos/sync — envía el grupo completo de beneficiarios al proveedor. */
   abstract syncOwners(): Observable<OnboardingStatus>;
-  /** POST /api/ubos/liveness-links — un enlace por beneficiario final (exige verificación disparada). */
+  /** POST /api/ubos/liveness-links — un enlace por beneficiario final (exige verificación disparada y consentimiento biométrico). */
   abstract requestLivenessLinks(): Observable<OwnershipRoster>;
+  /** GET /api/onboarding/terms — términos vigentes y versión aceptada. */
+  abstract terms(): Observable<ProviderTerms>;
+  /** POST /api/onboarding/terms — acepta la versión vigente (exige expediente creado). */
+  abstract acceptTerms(version: string): Observable<ProviderTerms>;
+}
+
+export interface ProviderTerms {
+  /** Versión vigente; `null` si el BFF no tiene términos configurados y no hay nada que aceptar. */
+  readonly version: string | null;
+  readonly url: string | null;
+  readonly acceptedVersion: string | null;
+}
+
+/** Hay términos vigentes que la empresa todavía no aceptó. */
+export function termsPending(terms: ProviderTerms | null): boolean {
+  return !!terms?.version && terms.acceptedVersion !== terms.version;
 }
 
 export interface SavedDraft {
@@ -59,4 +75,6 @@ export interface AttachDocuments {
   /** AAAA-MM-DD */
   readonly expiration: string | null;
   readonly files: readonly DocumentFile[];
+  /** Declaración de consentimiento biométrico; el BFF la exige si viaja una selfie. */
+  readonly biometricConsent?: boolean;
 }

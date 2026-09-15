@@ -13,11 +13,12 @@ import {
   ResidentialAddressDto,
   OnboardingViewDto,
   SaveUboDto,
+  TermsViewDto,
   UboRosterDto,
   UboViewDto,
 } from './onboarding.dto';
 import { normalizeDraft } from '../domain/onboarding-draft';
-import { SavedDraft } from '../domain/onboarding.repository';
+import { ProviderTerms, SavedDraft } from '../domain/onboarding.repository';
 import { toDate } from '../../../shared/utilities/dates';
 
 export function toOnboardingStatus(dto: OnboardingViewDto): OnboardingStatus {
@@ -152,4 +153,8 @@ function optional<K extends string>(key: K, value: string | null): Partial<Recor
 
 export function toSavedDraft(dto: OnboardingDraftViewDto): SavedDraft {
   return { draft: normalizeDraft(dto.draft ?? {}), updatedAt: toDate(dto.updatedAt) };
+}
+
+export function toProviderTerms(dto: TermsViewDto): ProviderTerms {
+  return { version: dto.version ?? null, url: dto.url ?? null, acceptedVersion: dto.acceptedVersion ?? null };
 }
