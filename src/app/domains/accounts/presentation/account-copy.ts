@@ -35,6 +35,13 @@ export function readinessCopy(readiness: AccountReadiness): ReadinessCopy {
       };
     case 'inactive':
       return { label: 'Desactivada', tone: 'critical', explanation: 'La cuenta no puede operar.' };
+    case 'frozen':
+      return {
+        label: 'Congelada',
+        tone: 'critical',
+        explanation:
+          'El proveedor congeló la cuenta. Mientras dure no puede enviar pagos. Contacta a soporte de AU con el identificador de la cuenta.',
+      };
     case 'failed':
       return {
         label: 'Apertura fallida',

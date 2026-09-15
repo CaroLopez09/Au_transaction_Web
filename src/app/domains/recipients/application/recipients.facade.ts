@@ -22,6 +22,8 @@ export class RecipientsFacade {
   readonly providerRecipients = this.providerState.asReadonly();
   readonly busy = this.busyState.asReadonly();
 
+  private registerKey = crypto.randomUUID();
+
   async loadList(): Promise<void> {
     this.listState.set(loading());
     this.listState.set(await fetchRemote(this.repository.list()));
@@ -32,14 +34,18 @@ export class RecipientsFacade {
     this.providerState.set(await fetchRemote(this.repository.listInProvider()));
   }
 
-  /** Cada alta usa una clave nueva en el BFF: un segundo envío en curso se descarta. */
+  /** Una clave por alta: un reintento o un doble clic devuelven el mismo destinatario (G-07). */
   async register(command: RegisterRecipient): Promise<ActionResult<Recipient> | null> {
     if (this.busyState()) {
       return null;
     }
     this.busyState.set('register');
     try {
-      return await runAction(this.repository.register(command));
+      const result = await runAction(this.repository.register(command, this.registerKey));
+      if (result.ok) {
+        this.registerKey = crypto.randomUUID();
+      }
+      return result;
     } finally {
       this.busyState.set(null);
     }

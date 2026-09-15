@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 
-export type VirtualAccountStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'FAILED' | 'UNKNOWN';
+export type VirtualAccountStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'FAILED' | 'FROZEN' | 'UNKNOWN';
 export type VirtualAccountMode = 'FIAT' | 'CRYPTO' | 'UNKNOWN';
 
 export interface VirtualAccount {
@@ -26,12 +26,22 @@ export interface VirtualAccount {
   readonly createdAt: Date | null;
 }
 
-export type AccountReadiness = 'operational' | 'activating' | 'delayed' | 'not-confirmed' | 'inactive' | 'failed';
+export type AccountReadiness =
+  | 'operational'
+  | 'activating'
+  | 'delayed'
+  | 'not-confirmed'
+  | 'inactive'
+  | 'frozen'
+  | 'failed';
 
 /** Orden de las reglas: el backend decide `fundsReady`; el estado solo matiza lo que no es operativo. */
 export function accountReadiness(account: VirtualAccount): AccountReadiness {
   if (account.fundsReady) {
     return 'operational';
+  }
+  if (account.status === 'FROZEN') {
+    return 'frozen';
   }
   if (account.status === 'FAILED') {
     return 'failed';
@@ -72,7 +82,8 @@ export abstract class VirtualAccountRepository {
 
 export function parseAccountStatus(raw: string | null | undefined): VirtualAccountStatus {
   const value = raw?.trim().toUpperCase();
-  return value === 'PENDING' || value === 'ACTIVE' || value === 'INACTIVE' || value === 'FAILED' ? value : 'UNKNOWN';
+  const known: readonly VirtualAccountStatus[] = ['PENDING', 'ACTIVE', 'INACTIVE', 'FAILED', 'FROZEN'];
+  return known.includes(value as VirtualAccountStatus) ? (value as VirtualAccountStatus) : 'UNKNOWN';
 }
 
 export function parseAccountMode(raw: string | null | undefined): VirtualAccountMode {

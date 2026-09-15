@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 
-export type RfiStatus = 'PENDING' | 'ANSWERED' | 'RESOLVED' | 'NOT_RESOLVED' | 'UNKNOWN';
+export type RfiStatus = 'PENDING' | 'ANSWERED' | 'RESOLVED' | 'NOT_RESOLVED' | 'WITHDRAWN' | 'UNKNOWN';
 
 /** answer_type documentados por el proveedor (docs.kirafin.ai/reference/rfis/values). */
 export type AnswerType =
@@ -35,6 +35,8 @@ export interface AnswerSpec {
   readonly mimeTypes: readonly string[];
   readonly maxFiles: number | null;
   readonly url: string | null;
+  /** ubo_link sin `url`: el enlace se acuña bajo demanda con estos identificadores. */
+  readonly applicantId: string | null;
 }
 
 export interface RfiItem {
@@ -61,6 +63,8 @@ export interface Rfi {
   readonly providerRfiId: string | null;
   readonly status: RfiStatus;
   readonly rawStatus: string;
+  /** expired, rejected o withdrawn cuando cerró sin resolverse. */
+  readonly resolutionReason: string | null;
   readonly open: boolean;
   readonly overdue: boolean;
   readonly dueDate: Date | null;
@@ -121,4 +125,6 @@ export abstract class RfiRepository {
   abstract uploadDocuments(id: string, itemId: string, files: readonly File[]): Observable<Rfi>;
   abstract removeDocument(id: string, itemId: string, documentId: string): Observable<Rfi>;
   abstract documentLink(id: string, itemId: string, documentId: string): Observable<TemporaryLink>;
+  /** POST /api/rfis/{id}/items/{itemId}/ubo-link — enlace de verificación de un beneficiario (~1 h). */
+  abstract ownerVerificationLink(id: string, itemId: string): Observable<TemporaryLink>;
 }

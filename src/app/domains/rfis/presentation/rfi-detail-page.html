@@ -245,10 +245,19 @@
                 >
                   Abrir verificación del beneficiario
                 </a>
+              } @else if (item.spec.applicantId && editable()) {
+                <button
+                  type="button"
+                  class="au-button au-button--secondary"
+                  [disabled]="facade.busy() === 'owner-link:' + item.id"
+                  (click)="openOwnerVerification(item)"
+                >
+                  {{ facade.busy() === 'owner-link:' + item.id ? 'Generando enlace…' : 'Abrir verificación del beneficiario' }}
+                </button>
+                <p class="au-help">El enlace se genera al pulsar y caduca en aproximadamente una hora.</p>
               } @else {
                 <p class="au-notice">
-                  Este requerimiento necesita un enlace de verificación que el portal aún no puede generar. Contacta a
-                  soporte de AU.
+                  El proveedor no envió los datos para generar este enlace. Contacta a soporte de AU.
                 </p>
               }
             }

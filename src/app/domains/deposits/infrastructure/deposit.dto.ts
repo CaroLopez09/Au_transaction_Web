@@ -13,6 +13,7 @@ export interface DepositViewDto {
   status: string;
   microdeposit: boolean;
   creditsBalance: boolean;
+  held: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

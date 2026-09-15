@@ -23,8 +23,12 @@ export class RecipientHttpRepository extends RecipientRepository {
     return this.http.get<KiraRecipientViewDto[]>(`${this.url}/kira`).pipe(map((dtos) => dtos.map(toProviderRecipient)));
   }
 
-  register(command: RegisterRecipient): Observable<Recipient> {
-    return this.http.post<RecipientViewDto>(this.url, toRegisterRecipientDto(command)).pipe(map(toRecipient));
+  register(command: RegisterRecipient, idempotencyKey: string): Observable<Recipient> {
+    return this.http
+      .post<RecipientViewDto>(this.url, toRegisterRecipientDto(command), {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      })
+      .pipe(map(toRecipient));
   }
 
   archive(id: string, replacedByRecipientId: string | null): Observable<Recipient> {

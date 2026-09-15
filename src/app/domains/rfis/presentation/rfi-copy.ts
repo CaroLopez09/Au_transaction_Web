@@ -13,7 +13,17 @@ export function rfiStatusCopy(rfi: Rfi): { label: string; tone: StatusTone } {
     case 'RESOLVED':
       return { label: 'Resuelta', tone: 'success' };
     case 'NOT_RESOLVED':
-      return { label: 'No resuelta', tone: 'critical' };
+      return {
+        label:
+          rfi.resolutionReason === 'expired'
+            ? 'No resuelta: venció el plazo'
+            : rfi.resolutionReason === 'rejected'
+              ? 'No resuelta: respuesta rechazada'
+              : 'No resuelta',
+        tone: 'critical',
+      };
+    case 'WITHDRAWN':
+      return { label: 'Retirada por el proveedor', tone: 'neutral' };
     case 'UNKNOWN':
       return { label: 'Estado en validación', tone: 'neutral' };
   }

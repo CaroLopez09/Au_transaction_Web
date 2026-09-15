@@ -18,6 +18,7 @@ export function toDeposit(dto: DepositViewDto): Deposit {
     rawStatus: dto.status,
     microdeposit: dto.microdeposit,
     creditsBalance: dto.creditsBalance,
+    held: dto.held ?? false,
     createdAt: toDate(dto.createdAt),
     updatedAt: toDate(dto.updatedAt),
   };

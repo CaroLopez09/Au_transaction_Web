@@ -45,6 +45,12 @@ export function statusCopy(status: PayoutStatus): { label: string; tone: StatusT
         tone: 'critical',
         explanation: 'El pago no se completó. Si hubo devolución, el saldo se reflejará al consultar la cuenta.',
       };
+    case 'CANCELLED':
+      return {
+        label: 'Cancelado',
+        tone: 'neutral',
+        explanation: 'El pago se detuvo antes de enviarse. No salió dinero de la cuenta.',
+      };
     case 'EXPIRED':
       return { label: 'Vencido', tone: 'neutral', explanation: null };
     case 'UNKNOWN':

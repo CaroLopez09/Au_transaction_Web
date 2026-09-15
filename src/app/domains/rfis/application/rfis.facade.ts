@@ -10,7 +10,15 @@ import {
 } from '../../../shared/utilities/remote-data';
 import { ItemAnswer, Rfi, RfiRepository, TemporaryLink } from '../domain/rfi';
 
-type Busy = 'sync' | 'refresh' | 'answer' | `upload:${string}` | `remove:${string}` | `link:${string}` | null;
+type Busy =
+  | 'sync'
+  | 'refresh'
+  | 'answer'
+  | `upload:${string}`
+  | `remove:${string}`
+  | `link:${string}`
+  | `owner-link:${string}`
+  | null;
 
 @Injectable()
 export class RfisFacade {
@@ -62,6 +70,11 @@ export class RfisFacade {
   /** El enlace es una credencial temporal: se pide al momento y no se guarda. */
   documentLink(id: string, itemId: string, documentId: string): Promise<ActionResult<TemporaryLink> | null> {
     return this.run(`link:${documentId}`, this.repository.documentLink(id, itemId, documentId), () => undefined);
+  }
+
+  /** Se acuña cuando la persona pulsa: caduca en torno a una hora y no se guarda. */
+  ownerVerificationLink(id: string, itemId: string): Promise<ActionResult<TemporaryLink> | null> {
+    return this.run(`owner-link:${itemId}`, this.repository.ownerVerificationLink(id, itemId), () => undefined);
   }
 
   private async run<T>(

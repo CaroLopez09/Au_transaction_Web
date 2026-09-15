@@ -43,9 +43,11 @@ export class PayoutHttpRepository extends PayoutRepository {
       .pipe(map((dtos) => dtos.map(toPayoutEvent)));
   }
 
-  create(command: CreatePayout): Observable<Payout> {
+  create(command: CreatePayout, idempotencyKey: string): Observable<Payout> {
     const body: CreatePayoutDto = { ...command };
-    return this.http.post<PayoutViewDto>(this.url, body).pipe(map(toPayout));
+    return this.http
+      .post<PayoutViewDto>(this.url, body, { headers: { 'Idempotency-Key': idempotencyKey } })
+      .pipe(map(toPayout));
   }
 
   approve(id: string, command: ApprovePayout): Observable<Payout> {

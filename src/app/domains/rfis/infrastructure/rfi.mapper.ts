@@ -20,8 +20,11 @@ export function toRfi(dto: RfiViewDto): Rfi {
   return {
     id: dto.id,
     providerRfiId: dto.kiraRfiId ?? null,
-    status: (['PENDING', 'ANSWERED', 'RESOLVED', 'NOT_RESOLVED'].includes(status) ? status : 'UNKNOWN') as RfiStatus,
+    status: (['PENDING', 'ANSWERED', 'RESOLVED', 'NOT_RESOLVED', 'WITHDRAWN'].includes(status)
+      ? status
+      : 'UNKNOWN') as RfiStatus,
     rawStatus: dto.status,
+    resolutionReason: dto.resolutionReason ?? null,
     open: dto.open,
     overdue: dto.overdue,
     dueDate: toDate(dto.dueDate),
@@ -82,6 +85,7 @@ function toSpec(raw: unknown): AnswerSpec {
       : [],
     maxFiles: num(spec['max_files']),
     url: str(spec['url']),
+    applicantId: str(spec['applicant_id']),
   };
 }
 

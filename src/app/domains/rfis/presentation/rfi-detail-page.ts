@@ -201,6 +201,18 @@ export class RfiDetailPage implements OnInit {
     this.itemErrors.update((errors) => ({ ...errors, [item.id]: result.error.description }));
   }
 
+  protected async openOwnerVerification(item: RfiItem): Promise<void> {
+    const result = await this.facade.ownerVerificationLink(this.id(), item.id);
+    if (!result) {
+      return;
+    }
+    if (result.ok) {
+      window.open(result.value.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    this.itemErrors.update((errors) => ({ ...errors, [item.id]: result.error.description }));
+  }
+
   protected startRemoval(item: RfiItem, document: RfiDocument): void {
     this.removing.set({ item, document });
   }

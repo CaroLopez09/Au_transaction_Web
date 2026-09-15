@@ -119,7 +119,8 @@ export abstract class RecipientRepository {
   abstract list(): Observable<readonly Recipient[]>;
   abstract get(id: string): Observable<Recipient>;
   abstract listInProvider(): Observable<readonly ProviderRecipient[]>;
-  abstract register(command: RegisterRecipient): Observable<Recipient>;
+  /** `idempotencyKey`: UUID por intención; repetirla devuelve el destinatario ya registrado. */
+  abstract register(command: RegisterRecipient, idempotencyKey: string): Observable<Recipient>;
   abstract archive(id: string, replacedByRecipientId: string | null): Observable<Recipient>;
 }
 

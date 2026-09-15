@@ -10,6 +10,7 @@ export type PayoutStatus =
   | 'IN_REVIEW'
   | 'COMPLETED'
   | 'FAILED'
+  | 'CANCELLED'
   | 'EXPIRED'
   | 'UNKNOWN';
 
@@ -146,7 +147,8 @@ export abstract class PayoutRepository {
   abstract list(limit: number): Observable<readonly Payout[]>;
   abstract get(id: string): Observable<Payout>;
   abstract events(id: string): Observable<readonly PayoutEvent[]>;
-  abstract create(command: CreatePayout): Observable<Payout>;
+  /** `idempotencyKey`: UUID por intención; repetirla devuelve el pago ya creado. */
+  abstract create(command: CreatePayout, idempotencyKey: string): Observable<Payout>;
   abstract approve(id: string, command: ApprovePayout): Observable<Payout>;
   abstract reject(id: string, reason: string): Observable<Payout>;
   abstract refresh(id: string): Observable<Payout>;

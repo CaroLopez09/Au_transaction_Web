@@ -8,10 +8,10 @@ import { AccountsFacade } from '../../accounts/application/accounts.facade';
 import { accountLabel } from '../../accounts/presentation/account-label';
 import { DepositsFacade } from '../application/deposits.facade';
 import { DepositStatus, Rail } from '../domain/deposit';
-import { depositStatusCopy, RAIL_LABELS } from './deposit-copy';
+import { depositStatusCopy, HELD_DEPOSITS_NOTICE, RAIL_LABELS } from './deposit-copy';
 import { DepositTable } from './deposit-table';
 
-const STATUSES: DepositStatus[] = ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'];
+const STATUSES: DepositStatus[] = ['PENDING', 'COMPLETED', 'KYT_PENDING', 'KYT_REJECTED', 'FAILED', 'REFUNDED'];
 const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
 
 @Component({
@@ -45,6 +45,9 @@ const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
             <a class="au-button au-button--secondary" routerLink="/cuentas">Ver cuentas</a>
           </section>
         } @else {
+          @if (hasHeld()) {
+            <p class="au-notice" role="status">{{ heldNotice }}</p>
+          }
           <form class="filters" role="search" aria-label="Filtrar depósitos" (submit)="$event.preventDefault()">
             <div class="au-field">
               <label class="au-label" for="deposit-status">Estado</label>
@@ -122,6 +125,8 @@ export class DepositsPage implements OnInit {
 
   protected readonly error = computed(() => errorOf(this.facade.deposits()));
   protected readonly all = computed(() => dataOf(this.facade.deposits()) ?? []);
+  protected readonly hasHeld = computed(() => this.all().some((deposit) => deposit.held));
+  protected readonly heldNotice = HELD_DEPOSITS_NOTICE;
   protected readonly accountOptions = computed(() =>
     (dataOf(this.accounts.accounts()) ?? []).map((account) => ({ id: account.id, label: accountLabel(account) })),
   );

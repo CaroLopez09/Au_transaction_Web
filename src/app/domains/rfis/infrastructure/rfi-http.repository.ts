@@ -4,7 +4,7 @@ import { map, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../../core/configuration/app-config';
 import { toDate } from '../../../shared/utilities/dates';
 import { ItemAnswer, Rfi, RfiRepository, TemporaryLink } from '../domain/rfi';
-import { RfiDocumentLinkDto, RfiViewDto } from './rfi.dto';
+import { RfiDocumentLinkDto, RfiUboLinkDto, RfiViewDto } from './rfi.dto';
 import { toRfi } from './rfi.mapper';
 
 @Injectable()
@@ -57,6 +57,12 @@ export class RfiHttpRepository extends RfiRepository {
         `${this.itemUrl(id)}/items/${encodeURIComponent(itemId)}/documents/${encodeURIComponent(documentId)}/link`,
       )
       .pipe(map((dto) => ({ url: dto.downloadUrl, expiresAt: toDate(dto.expiresAt) })));
+  }
+
+  ownerVerificationLink(id: string, itemId: string): Observable<TemporaryLink> {
+    return this.http
+      .post<RfiUboLinkDto>(`${this.itemUrl(id)}/items/${encodeURIComponent(itemId)}/ubo-link`, null)
+      .pipe(map((dto) => ({ url: dto.url, expiresAt: toDate(dto.expiresAt) })));
   }
 
   private itemUrl(id: string): string {

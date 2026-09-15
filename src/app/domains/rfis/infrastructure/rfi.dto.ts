@@ -3,6 +3,7 @@ export interface RfiViewDto {
   id: string;
   kiraRfiId?: string;
   status: string;
+  resolutionReason?: string;
   open: boolean;
   overdue: boolean;
   dueDate?: string;
@@ -24,5 +25,11 @@ export interface RfiViewDto {
 /** application/compliance/RfiDocumentLink */
 export interface RfiDocumentLinkDto {
   downloadUrl: string;
+  expiresAt?: string;
+}
+
+/** application/compliance/RfiUboLink */
+export interface RfiUboLinkDto {
+  url: string;
   expiresAt?: string;
 }

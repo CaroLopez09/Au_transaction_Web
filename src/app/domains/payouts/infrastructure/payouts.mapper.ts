@@ -19,6 +19,7 @@ const STATUSES: readonly PayoutStatus[] = [
   'IN_REVIEW',
   'COMPLETED',
   'FAILED',
+  'CANCELLED',
   'EXPIRED',
 ];
 

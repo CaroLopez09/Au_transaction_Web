@@ -56,8 +56,13 @@ describe('depósitos', () => {
       status: 'refunded',
       microdeposit: false,
       creditsBalance: false,
+      held: false,
     });
     expect(deposit).toMatchObject({ rail: 'WIRE', status: 'REFUNDED', grossAmount: 100, netAmount: 98.5 });
+    expect(toDeposit({ ...deposit, id: 'y', status: 'kyt_rejected', held: true } as never)).toMatchObject({
+      status: 'KYT_REJECTED',
+      held: true,
+    });
     expect(
       toDeposit({ ...deposit, id: 'x', status: 'kyt', microdeposit: false, creditsBalance: false } as never).status,
     ).toBe('UNKNOWN');
