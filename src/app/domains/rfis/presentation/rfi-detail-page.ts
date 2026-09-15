@@ -52,7 +52,8 @@ export class RfiDetailPage implements OnInit {
   protected readonly identifierHints = IDENTIFIER_HINTS;
   protected readonly rfi = computed(() => dataOf(this.facade.detail()));
   protected readonly loadError = computed(() => errorOf(this.facade.detail()));
-  protected readonly editable = computed(() => this.session.can('rfis.manage') && (this.rfi()?.open ?? false));
+  protected readonly canManage = computed(() => this.session.can('rfis.manage'));
+  protected readonly editable = computed(() => this.canManage() && (this.rfi()?.open ?? false));
   protected readonly status = computed(() => {
     const rfi = this.rfi();
     return rfi ? rfiStatusCopy(rfi) : null;

@@ -18,7 +18,9 @@ export const CAPABILITY_ROLES = {
   'payouts.prepare': ['ADMIN', 'TREASURY_MAKER'],
   /** POST /api/payouts/{id}/approve, /reject */
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
-  /** POST /api/rfis/sync, /refresh, PATCH items, documentos */
+  /** POST /api/onboarding/refresh, /api/virtual-accounts/{id}/refresh|balance|deposits/sync, /api/payouts/{id}/refresh */
+  'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
+  /** POST /api/rfis/sync, /refresh, PATCH items, documentos (subir, borrar y enlace de descarga) */
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   /** GET /api/events, GET /api/audit */
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],

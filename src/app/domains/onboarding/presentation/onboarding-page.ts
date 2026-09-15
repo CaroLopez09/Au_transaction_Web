@@ -131,7 +131,7 @@ export class OnboardingPage implements OnInit {
   });
   protected readonly canRefresh = computed(() => {
     const status = this.status();
-    return !!status && canRefreshFromProvider(status);
+    return !!status && canRefreshFromProvider(status) && this.session.can('provider.refresh');
   });
   protected readonly pending = computed(() => pendingByStep(this.status()));
   protected readonly defaultCountry = computed(() => this.wizard.draft().company.formation_country);

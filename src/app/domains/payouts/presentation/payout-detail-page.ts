@@ -86,6 +86,7 @@ export class PayoutDetailPage implements OnInit {
       approval: approvalCopy(payout.approvalState),
       status: statusCopy(payout.status),
       submitted: payout.approvalState === 'SUBMITTED',
+      canRefresh: payout.approvalState === 'SUBMITTED' && this.session.can('provider.refresh'),
       isMine: payout.makerUserId === this.session.operator()?.userId,
       recipient: (dataOf(this.recipients.recipients()) ?? []).find((item) => item.id === payout.recipientId) ?? null,
       account: (dataOf(this.accounts.accounts()) ?? []).find((item) => item.id === payout.virtualAccountId) ?? null,

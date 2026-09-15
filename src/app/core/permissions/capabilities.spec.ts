@@ -9,6 +9,7 @@ const EXPECTED: Record<Capability, readonly Role[]> = {
   'recipients.manage': ['ADMIN', 'TREASURY_MAKER'],
   'payouts.prepare': ['ADMIN', 'TREASURY_MAKER'],
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
+  'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   'platform.console': ['PLATFORM_OPERATOR'],

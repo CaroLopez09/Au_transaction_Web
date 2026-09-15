@@ -64,7 +64,7 @@ Reglas: credenciales erróneas y usuario inexistente → mismo `422 business_rul
 | 3 | `GET /api/onboarding` | `SubmitOnboardingService.status` (local, sin Kira) | `OnboardingRepository.status` | `HomePage` (MVP) · `OnboardingStatusPage` (MVP) | `KybStatusPanel`, `EligibilityChecklist` | `OnboardingViewDto` | `OnboardingStatus` | Todos |
 | 4 | `POST /api/onboarding` | `…register` | `OnboardingRepository.register` | `OnboardingStartPage` | `RegisterBusinessForm` | req `{businessLegalName,email,sourceOfFunds}` · res `OnboardingViewDto` (201) | `OnboardingStatus` | A, C |
 | 5 | `PUT /api/onboarding` | `…completeProfile` | `OnboardingRepository.completeProfile` | `OnboardingProfilePage` | `PendingFieldsForm` (dinámico desde `pendingFields`) | req `{profile: Record<string,unknown>}` | `OnboardingStatus` | A, C |
-| 6 | `POST /api/onboarding/refresh` | `…refresh` (llama a Kira) | `OnboardingRepository.refresh` | `OnboardingStatusPage` | `RefreshButton` | — · res `OnboardingViewDto` | `OnboardingStatus` | Todos |
+| 6 | `POST /api/onboarding/refresh` | `…refresh` (llama a Kira) | `OnboardingRepository.refresh` | `OnboardingStatusPage` | `RefreshButton` | — · res `OnboardingViewDto` | `OnboardingStatus` | A, M, P, C |
 
 | 6b | `GET /api/onboarding/draft` | `OnboardingDraftService.get` (local, **nunca** llama a Kira) | `OnboardingRepository.draft` | `OnboardingPage` (asistente) | todos los pasos | res `{draft: object, updatedAt?}` | `SavedDraft` | Todos |
 | 6c | `PUT /api/onboarding/draft` | `…save` (local) | `…saveDraft` | `OnboardingPage` | autoguardado 3 s, cambio de paso, «Guardar borrador» | req `{draft: object}` · `{}` lo borra · res igual que GET | `SavedDraft` | A, C |
@@ -108,8 +108,8 @@ Reglas: `sync` falla antes de llamar a Kira si no hay beneficiario final. Livene
 | 11 | `GET /api/virtual-accounts` | `OpenVirtualAccountService.list` | `VirtualAccountRepository.list` | `AccountsPage` · `HomePage` (MVP) | `AccountList`, `FundsReadinessBadge` | `VirtualAccountViewDto[]` | `VirtualAccount` | Todos |
 | 12 | `GET /api/virtual-accounts/{id}` | `…get` | `…get` | `AccountDetailPage` | `DepositInstructions`, `BalancePanel` | `VirtualAccountViewDto` | `VirtualAccount` | Todos |
 | 13 | `POST /api/virtual-accounts` | `…open` | `…open` | `AccountsPage` | `OpenAccountDrawer` | req `{description? ≤255, mode? (fiat|crypto), currency? ≤10}` · res 201 | `VirtualAccount` | A, M, C |
-| 14 | `POST /api/virtual-accounts/{id}/refresh` | `…refresh` | `…refresh` | `AccountDetailPage` | `RefreshButton` | res `VirtualAccountViewDto` | `VirtualAccount` | Todos |
-| 15 | `POST /api/virtual-accounts/{id}/balance` | `…refreshBalance` | `…refreshBalance` | `AccountDetailPage` | `BalancePanel` | res `VirtualAccountViewDto` | `VirtualAccount` | Todos |
+| 14 | `POST /api/virtual-accounts/{id}/refresh` | `…refresh` | `…refresh` | `AccountDetailPage` | `RefreshButton` | res `VirtualAccountViewDto` | `VirtualAccount` | A, M, P, C |
+| 15 | `POST /api/virtual-accounts/{id}/balance` | `…refreshBalance` | `…refreshBalance` | `AccountDetailPage` | `BalancePanel` | res `VirtualAccountViewDto` | `VirtualAccount` | A, M, P, C |
 | 16 | `POST /api/virtual-accounts/{id}/simulate-deposit` | `…simulateDeposit` (solo sandbox) | `…simulateDeposit` | `AccountDetailPage` | `SandboxDepositDrawer` (solo si entorno sandbox) | req `{amount* ≥0.01, paymentType? wire|ach}` | `VirtualAccount` | A, M |
 
 `VirtualAccountViewDto`: `id, kiraAccountId?, status (PENDING|ACTIVE|INACTIVE|FAILED), mode (FIAT|CRYPTO), bank?, bankName?, description?, accountNumber?, routingNumber?, currency?, availableBalance?, balanceRefreshedAt?, balanceStale, fundsReady, activationDelayed, createdAt`.
@@ -121,7 +121,7 @@ Reglas: **`fundsReady` es la única señal de operatividad; `ACTIVE` no basta.**
 |---|---|---|---|---|---|---|---|---|
 | 17 | `GET /api/deposits?limit=50` | `RecordDepositService.list` | `DepositRepository.list` | `DepositsPage` · `HomePage` (MVP, recientes) | `DepositTable` | `DepositViewDto[]` | `Deposit` | Todos |
 | 18 | `GET /api/virtual-accounts/{id}/deposits?limit=50` | `…listByAccount` | `…listByAccount` | `AccountDetailPage` | `DepositTable` | `DepositViewDto[]` | `Deposit` | Todos |
-| 19 | `POST /api/virtual-accounts/{id}/deposits/sync` | `…syncFromKira` | `…syncFromAccount` | `AccountDetailPage` | `SyncButton` | `DepositViewDto[]` | `Deposit` | Todos |
+| 19 | `POST /api/virtual-accounts/{id}/deposits/sync` | `…syncFromKira` | `…syncFromAccount` | `AccountDetailPage` | `SyncButton` | `DepositViewDto[]` | `Deposit` | A, M, P, C |
 
 `DepositViewDto`: `id, kiraDepositId?, virtualAccountId, grossAmount, feeAmount?, netAmount?, currency, senderName?, senderAccount?, rail? (ACH|WIRE|WALLET), status (PENDING|COMPLETED|FAILED|REFUNDED), microdeposit, creditsBalance, createdAt, updatedAt?`.
 Límite: único parámetro `limit` (sin página, sin filtros, sin orden). Filtros de la UI son locales sobre lo recibido.
@@ -166,7 +166,7 @@ Reglas: TTL 15 min fijado por Kira. `amount` = lo que **recibe** el destinatario
 | 34 | `POST /api/payouts/{id}/approve` | `…approveAndSubmit` | `…approve` | `PayoutDetailPage` | `ApprovePayoutPanel` (drawer) | req opcional `{comment?, natureOfPayment?, memo? ≤255, documents? ≤2 {type: invoice|other, file: data URI ≤3 MB}}` | `Payout` | A, P |
 | 35 | `POST /api/payouts/{id}/reject` | `…reject` | `…reject` | `PayoutDetailPage` | `RejectPayoutDialog` | req `{reason*}` | `Payout` | A, P |
 | 36 | `GET /api/payouts/{id}/events` | `…events` | `…events` | `PayoutDetailPage` | `PayoutTimeline` | `PayoutEventViewDto[]{eventId?,status?,message?,createdAt?}` | `PayoutEvent` | Todos |
-| 37 | `POST /api/payouts/{id}/refresh` | `…refreshFromKira` | `…refresh` | `PayoutDetailPage` | `RefreshButton` | `PayoutViewDto` | `Payout` | Todos |
+| 37 | `POST /api/payouts/{id}/refresh` | `…refreshFromKira` | `…refresh` | `PayoutDetailPage` | `RefreshButton` | `PayoutViewDto` | `Payout` | A, M, P, C |
 
 `PayoutViewDto`: `id, virtualAccountId, recipientId, quotationId?, amount, currency, kiraFee, platformFee, totalFee, totalDebitAmount, approvalState (PENDING_APPROVAL|APPROVED|REJECTED|SUBMITTED), status (NOT_SUBMITTED|CREATED|PENDING|PROCESSING|KYT_PENDING|IN_REVIEW|COMPLETED|FAILED|EXPIRED|UNKNOWN), terminal, makerUserId, approverUserId?, priceLocked, kiraPayoutId?, referenceNumber?, paymentMethod?, errorCode?, blockedByRfiId?, createdAt, updatedAt?`.
 `natureOfPayment ∈ vendor|pobo|first_party|spot_3p|spot_1p|related_entities|other`. Filtro `status` del historial Kira ∈ `CREATED|PENDING|PROCESSING|COMPLETED|FAILED|CANCELLED|IN_REVIEW|KYT_PENDING`; `limit` 1–100.
@@ -183,7 +183,7 @@ Reglas: el aprobador **no puede** ser el creador (validado en la entidad). Aprob
 | 42 | `PATCH /api/rfis/{id}/items` | `…answer` | `…answer` | `RfiDetailPage` | `RfiAnswerForm` (dinámico por `answer_type`) | req `{items: [{itemId*, answerValue*: string|number|boolean}]}` | `Rfi` | A, C |
 | 43 | `POST /api/rfis/{id}/items/{itemId}/documents` | `…uploadDocuments` | `…uploadDocuments` | `RfiDetailPage` | `FileUploader` | multipart, parte `files` repetida | `Rfi` | A, C |
 | 44 | `DELETE /api/rfis/{id}/items/{itemId}/documents/{documentId}` | `…removeDocument` | `…removeDocument` | `RfiDetailPage` | `ConfirmDialog` | — | `Rfi` | A, C |
-| 45 | `GET /api/rfis/{id}/items/{itemId}/documents/{documentId}/link` | `…documentLink` | `…documentLink` | `RfiDetailPage` | `DocumentLinkButton` | `{downloadUrl, expiresAt}` | `TemporaryLink` | Todos |
+| 45 | `GET /api/rfis/{id}/items/{itemId}/documents/{documentId}/link` | `…documentLink` | `…documentLink` | `RfiDetailPage` | `DocumentLinkButton` | `{downloadUrl, expiresAt}` | `TemporaryLink` | A, C |
 
 `RfiViewDto`: `id, kiraRfiId?, status (PENDING|ANSWERED|RESOLVED|NOT_RESOLVED), open, overdue, dueDate?, totalItems, pendingItems, items: Record<string,unknown>[] (forma cruda de Kira: item_id, status, answer_type, answer_spec…), blocking?{type (transfer|virtual_account_deposit), kiraResourceId, payoutId?, payoutStatus?, depositId?, depositStatus?}, createdAt, updatedAt?`.
 Esquema de ítem verificado en docs.kirafin.ai (`get-an-rfi`, `reference/rfis/values`, 14-sep): `item_id, ordinal, prompt, answer_type, answer_spec, target_key, subject, status (pending|answered), answer_value, documents[] {document_id, file_name, mime_type, size_bytes, checksum, uploaded_at}, review_note`; `answer_spec` por tipo: texto `max_length, format`; número `min, max, unit`; fecha `min_age`; choice `options: string[]`; identifier `format ∈ ein|ssn|email|e164|url|country_alpha3`; document `mime_types, max_files, document_type`; ubo_link `url` o `applicant_id + person_id`. `nature_of_payment` verificado en `reference/payouts/values`.
@@ -217,10 +217,10 @@ Reglas: `PATCH` es **todo o nada**: `422 rfi_answer_rejected` con `details` por 
 | Vista previa, cotizar, crear pago | ✓ | ✓ | | | |
 | Aprobar / rechazar pago (y nunca el propio) | ✓ | | ✓ | | |
 | Sincronizar / responder RFI, subir y borrar documentos | ✓ | | | ✓ | |
-| Refrescar desde Kira (onboarding, cuenta, saldo, depósitos, pago) | ✓ | ✓ | ✓ | ✓ | ✓ ⚠ |
-| Descargar documento de RFI (enlace temporal) | ✓ | ✓ | ✓ | ✓ | ✓ ⚠ |
+| Refrescar desde Kira (onboarding, cuenta, saldo, depósitos, pago) | ✓ | ✓ | ✓ | ✓ | |
+| Descargar documento de RFI (enlace temporal, auditado) | ✓ | | | ✓ | |
 
-⚠ El backend no restringe estos endpoints por rol. La UI los mostrará a `READ_ONLY` solo como "Actualizar" (no muta datos de negocio), y queda registrado como gap G-09.
+Capacidades del front: `provider.refresh` y `rfis.manage` (G-09, cerrado el 15-sep).
 
 La UI oculta o deshabilita acciones por rol **por claridad**, no por seguridad: el `@PreAuthorize` del BFF es la barrera real y la UI debe tratar un `403 forbidden` como caso normal.
 
@@ -260,7 +260,7 @@ Nota: los mensajes del BFF llegan **sin tildes** (`"Credenciales invalidas."`). 
 | G-06 | CORS / origen | Front servido aparte en despliegue | Sin CORS | Dev: proxy; prod: mismo origen obligatorio | Restricción de despliegue | Documentar reverse proxy o CORS explícito por entorno | Media |
 | G-07 | ~~Idempotencia al crear pago~~ ✅ Cerrado 15-sep: cabecera `Idempotency-Key` por intención en pagos y destinatarios. | Doble clic no crea dos pagos | `POST /api/payouts` genera clave nueva en cada llamada; no acepta clave del cliente | Dos envíos crean dos pagos `PENDING_APPROVAL` (no salen a Kira sin aprobar) | Duplicados en la bandeja | Aceptar `Idempotency-Key` del cliente en `POST /api/payouts` y `/api/recipients` | Alta |
 | G-08 | ~~Razón de rechazo KYB~~ ✅ Cerrado 15-sep: `OnboardingView.rejectionReason` (de `reasons[]` del webhook) y se muestra en la etapa «No aprobada». | Mostrar por qué se rechazó | Solo llega por webhook y no se expone en `OnboardingView` | UI dice "No aprobado" sin razón | Remediación a ciegas | Persistir y exponer `rejectionReasons` | Media |
-| G-09 | Permisos de refresco | `READ_ONLY` sin llamadas que tocan Kira | `refresh`, `balance`, `deposits/sync`, `payouts/{id}/refresh`, enlace de documento sin `@PreAuthorize` | UI los permite a todos | Consumo de cuota Kira por lectores; descarga de documentos RFI por `READ_ONLY` | Decidir y añadir `@PreAuthorize` | Media |
+| G-09 | Permisos de refresco | `READ_ONLY` sin llamadas que tocan Kira | **Cerrado (15-sep):** refrescos solo A, M, P, C; enlace de documento RFI solo A, C y auditado (`compliance.rfi_document_link_issued`) | Botones ocultos sin la capacidad | — | — | — |
 | G-10 | Mensajes con tildes / i18n | Español correcto | Mensajes del BFF sin tildes | Se muestran tal cual | Cosmético | Mensajes UTF-8 o códigos estables por regla | Baja |
 | G-11 | ~~Notificaciones~~ ✅ Cerrado 15-sep: `/api/notifications` y contador en la navegación. | Centro de avisos | No hay endpoint | Sin módulo de notificaciones | — | `GET /api/notifications` sobre `webhooks_log` | Media |
 | G-12 | ~~Auditoría~~ ✅ Cerrado 15-sep: `GET /api/audit` y página «Auditoría». | Historial de acciones | `AuditTrail` escribe `audit_log`, no hay lectura | Sin módulo de auditoría | — | `GET /api/audit` paginado | Media |

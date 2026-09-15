@@ -27,7 +27,7 @@
       ' del proveedor bancario.'
     "
   >
-    @if (editable() || current.open) {
+    @if (editable()) {
       <button
         type="button"
         class="au-button au-button--secondary"
@@ -191,15 +191,17 @@
                         }
                       </span>
                       <span class="doc-actions">
-                        <button
-                          type="button"
-                          class="au-button au-button--quiet"
-                          [disabled]="facade.busy() !== null"
-                          (click)="openDocument(item, document)"
-                        >
-                          <au-icon name="external-link" [size]="16" />
-                          {{ facade.busy() === 'link:' + document.id ? 'Abriendo…' : 'Abrir' }}
-                        </button>
+                        @if (canManage()) {
+                          <button
+                            type="button"
+                            class="au-button au-button--quiet"
+                            [disabled]="facade.busy() !== null"
+                            (click)="openDocument(item, document)"
+                          >
+                            <au-icon name="external-link" [size]="16" />
+                            {{ facade.busy() === 'link:' + document.id ? 'Abriendo…' : 'Abrir' }}
+                          </button>
+                        }
                         @if (editable()) {
                           <button
                             type="button"
@@ -252,7 +254,11 @@
                   [disabled]="facade.busy() === 'owner-link:' + item.id"
                   (click)="openOwnerVerification(item)"
                 >
-                  {{ facade.busy() === 'owner-link:' + item.id ? 'Generando enlace…' : 'Abrir verificación del beneficiario' }}
+                  {{
+                    facade.busy() === 'owner-link:' + item.id
+                      ? 'Generando enlace…'
+                      : 'Abrir verificación del beneficiario'
+                  }}
                 </button>
                 <p class="au-help">El enlace se genera al pulsar y caduca en aproximadamente una hora.</p>
               } @else {

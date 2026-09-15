@@ -20,7 +20,7 @@
 
 @if (current) {
   <au-page-header [title]="'Pago a ' + (current.recipient?.name ?? 'destinatario')">
-    @if (current.submitted) {
+    @if (current.canRefresh) {
       <button
         type="button"
         class="au-button au-button--secondary"

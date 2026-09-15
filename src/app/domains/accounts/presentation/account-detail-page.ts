@@ -62,7 +62,7 @@ export class AccountDetailPage implements OnInit {
     return {
       account,
       readiness: readinessCopy(accountReadiness(account)),
-      queryable: canQueryProvider(account),
+      queryable: canQueryProvider(account) && this.session.can('provider.refresh'),
       mode: modeLabel(account.mode),
       canSimulate: this.sandboxTools && this.session.can('accounts.simulateDeposit') && canQueryProvider(account),
     };
