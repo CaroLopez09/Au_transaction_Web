@@ -56,6 +56,10 @@ export class PayoutHttpRepository extends PayoutRepository {
       .pipe(map(toPayout));
   }
 
+  requote(id: string): Observable<Payout> {
+    return this.http.post<PayoutViewDto>(`${this.url}/${encodeURIComponent(id)}/requote`, null).pipe(map(toPayout));
+  }
+
   reject(id: string, reason: string): Observable<Payout> {
     return this.http
       .post<PayoutViewDto>(`${this.url}/${encodeURIComponent(id)}/reject`, { reason: reason.trim() })

@@ -31,7 +31,7 @@ export class PayoutsFacade {
   private readonly eventsState = signal<RemoteData<readonly PayoutEvent[]> | null>(null);
   private readonly quotationState = signal<RemoteData<Quotation> | null>(null);
   private readonly historyState = signal<RemoteData<ProviderPayoutPage>>(loading());
-  private readonly busyState = signal<'approve' | 'reject' | 'refresh' | null>(null);
+  private readonly busyState = signal<'approve' | 'reject' | 'refresh' | 'requote' | null>(null);
 
   readonly list = this.listState.asReadonly();
   readonly detail = this.detailState.asReadonly();
@@ -69,12 +69,17 @@ export class PayoutsFacade {
     return this.run('reject', this.payouts.reject(id, reason));
   }
 
+  /** Cotización nueva para un pago pendiente cuya cotización venció (ExecutePayoutService.requote). */
+  requote(id: string): Promise<ActionResult<Payout> | null> {
+    return this.run('requote', this.payouts.requote(id));
+  }
+
   refresh(id: string): Promise<ActionResult<Payout> | null> {
     return this.run('refresh', this.payouts.refresh(id));
   }
 
   private async run(
-    action: 'approve' | 'reject' | 'refresh',
+    action: 'approve' | 'reject' | 'refresh' | 'requote',
     source: Observable<Payout>,
   ): Promise<ActionResult<Payout> | null> {
     if (this.busyState()) {

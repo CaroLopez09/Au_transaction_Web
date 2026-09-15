@@ -116,7 +116,8 @@
           } @else if (current.canDecide) {
             @if (current.quoteExpired) {
               <p class="au-notice au-notice--attention">
-                La cotización venció: el pago ya no puede aprobarse con ese precio. Recházalo y prepara uno nuevo.
+                La cotización venció: el pago ya no puede aprobarse con ese precio. Pide una nueva y revisa el desglose
+                antes de aprobar.
               </p>
             }
             <div class="decision-actions">
@@ -128,14 +129,26 @@
               >
                 Rechazar
               </button>
-              <button
-                type="button"
-                class="au-button au-button--primary"
-                [disabled]="facade.busy() !== null || current.quoteExpired"
-                (click)="startApproval()"
-              >
-                Revisar y aprobar
-              </button>
+              @if (current.quoteExpired) {
+                <button
+                  type="button"
+                  class="au-button au-button--primary"
+                  [disabled]="facade.busy() !== null"
+                  [attr.aria-busy]="facade.busy() === 'requote'"
+                  (click)="requote()"
+                >
+                  {{ facade.busy() === 'requote' ? 'Cotizando…' : 'Recotizar' }}
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="au-button au-button--primary"
+                  [disabled]="facade.busy() !== null"
+                  (click)="startApproval()"
+                >
+                  Revisar y aprobar
+                </button>
+              }
             </div>
             @if (current.quoteSeconds !== null && current.quoteSeconds > 0) {
               <p class="meta">

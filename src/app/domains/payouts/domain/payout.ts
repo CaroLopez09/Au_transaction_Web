@@ -170,6 +170,8 @@ export abstract class PayoutRepository {
   abstract create(command: CreatePayout, idempotencyKey: string): Observable<Payout>;
   abstract approve(id: string, command: ApprovePayout): Observable<Payout>;
   abstract reject(id: string, reason: string): Observable<Payout>;
+  /** POST /api/payouts/{id}/requote — nueva cotización con el mismo importe; anula una primera firma. */
+  abstract requote(id: string): Observable<Payout>;
   abstract refresh(id: string): Observable<Payout>;
   abstract providerHistory(query: ProviderHistoryQuery): Observable<ProviderPayoutPage>;
 }

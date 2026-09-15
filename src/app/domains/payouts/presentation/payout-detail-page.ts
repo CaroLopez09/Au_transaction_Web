@@ -202,6 +202,24 @@ export class PayoutDetailPage implements OnInit {
     }
   }
 
+  protected async requote(): Promise<void> {
+    this.actionError.set(null);
+    this.notice.set(null);
+    const result = await this.facade.requote(this.id());
+    if (!result) {
+      return;
+    }
+    if (result.ok) {
+      this.notice.set(
+        result.value.requiredApprovals > 1
+          ? 'Nueva cotización aplicada. Revisa el desglose: las aprobaciones empiezan de nuevo.'
+          : 'Nueva cotización aplicada. Revisa el desglose antes de aprobar.',
+      );
+    } else {
+      this.actionError.set(result.error);
+    }
+  }
+
   protected startRejection(): void {
     this.rejectForm.reset({ reason: '' });
     this.actionError.set(null);
