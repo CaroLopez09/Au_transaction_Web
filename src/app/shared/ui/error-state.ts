@@ -13,6 +13,11 @@ import { Icon } from './icon';
     <div class="body">
       <h2>{{ error().title }}</h2>
       <p>{{ error().description }}</p>
+      @if (error().source.requestId; as code) {
+        <p class="support">
+          Código para soporte: <span class="au-num">{{ code }}</span>
+        </p>
+      }
       @if (error().action === 'retry' || error().action === 'wait') {
         <button type="button" class="au-button au-button--secondary" (click)="retry.emit()">Reintentar</button>
       }
@@ -42,6 +47,10 @@ import { Icon } from './icon';
       margin-top: var(--au-space-1);
       color: var(--au-text-body);
       max-width: 60ch;
+    }
+    .support {
+      color: var(--au-text-muted);
+      font-size: var(--au-fs-data);
     }
     button {
       margin-top: var(--au-space-4);

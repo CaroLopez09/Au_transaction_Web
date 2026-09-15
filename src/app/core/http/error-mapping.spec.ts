@@ -6,6 +6,18 @@ const http = (status: number, error: unknown) =>
   new HttpErrorResponse({ status, error, headers: new HttpHeaders(), url: '/api/x' });
 
 describe('toApiError', () => {
+  it('conserva el X-Request-Id como código para soporte', () => {
+    const error = toApiError(
+      new HttpErrorResponse({
+        status: 500,
+        error: { code: 'internal_error', message: 'Fallo.' },
+        headers: new HttpHeaders({ 'X-Request-Id': 'req-12345678' }),
+        url: '/api/x',
+      }),
+    );
+    expect(error.requestId).toBe('req-12345678');
+  });
+
   it('lee la forma { code, message, details } del BFF', () => {
     const error = toApiError(
       http(400, { code: 'validation_error', message: 'Datos invalidos.', details: { email: 'no debe estar vacío' } }),
@@ -15,6 +27,7 @@ describe('toApiError', () => {
       code: 'validation_error',
       message: 'Datos invalidos.',
       details: { email: 'no debe estar vacío' },
+      requestId: null,
     });
   });
 

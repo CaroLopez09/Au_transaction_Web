@@ -11,6 +11,8 @@ export interface ApiError {
   readonly code: string;
   readonly message: string | null;
   readonly details: Readonly<Record<string, unknown>> | null;
+  /** X-Request-Id de la respuesta: el código con el que soporte encuentra la petición en los logs del BFF. */
+  readonly requestId?: string | null;
 }
 
 export const NETWORK_ERROR_CODE = 'network_error';
@@ -25,14 +27,15 @@ export function toApiError(error: unknown): ApiError {
     return { status: 0, code: NETWORK_ERROR_CODE, message: null, details: null };
   }
 
+  const requestId = error.headers?.get('X-Request-Id') ?? null;
   const body = readBody(error.error);
   if (body) {
-    return { status: error.status, ...body };
+    return { status: error.status, ...body, requestId };
   }
   if (error.status === 403) {
-    return { status: 403, code: SESSION_MISSING_CODE, message: null, details: null };
+    return { status: 403, code: SESSION_MISSING_CODE, message: null, details: null, requestId };
   }
-  return { status: error.status, code: UNKNOWN_ERROR_CODE, message: null, details: null };
+  return { status: error.status, code: UNKNOWN_ERROR_CODE, message: null, details: null, requestId };
 }
 
 function readBody(raw: unknown): Omit<ApiError, 'status'> | null {
