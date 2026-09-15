@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authenticatedGuard, capabilityGuard, guestGuard } from './core/auth/auth.guards';
+import { audienceGuard, authenticatedGuard, capabilityGuard, guestGuard } from './core/auth/auth.guards';
 import { OnboardingFacade } from './domains/onboarding/application/onboarding.facade';
 import { OnboardingRepository } from './domains/onboarding/domain/onboarding.repository';
 import { OnboardingHttpRepository } from './domains/onboarding/infrastructure/onboarding-http.repository';
@@ -17,6 +17,11 @@ import { RecipientRepository } from './domains/recipients/domain/recipient';
 import { RfiRepository } from './domains/rfis/domain/rfi';
 import { RfiHttpRepository } from './domains/rfis/infrastructure/rfi-http.repository';
 import { RecipientHttpRepository } from './domains/recipients/infrastructure/recipient-http.repository';
+import { ActivityRepository } from './domains/activity/domain/activity';
+import { ActivityHttpRepository } from './domains/activity/infrastructure/activity-http.repository';
+import { UnreadNotifications } from './domains/activity/presentation/unread-notifications';
+import { PlatformRepository } from './domains/platform/domain/platform';
+import { PlatformHttpRepository } from './domains/platform/infrastructure/platform-http.repository';
 
 const TITLE_SUFFIX = ' · AU Transactional';
 
@@ -30,6 +35,7 @@ export const routes: Routes = [
   {
     path: '',
     canMatch: [authenticatedGuard],
+    canActivateChild: [audienceGuard],
     loadComponent: () => import('./core/layout/app-shell').then((m) => m.AppShell),
     // Vinculación la leen Inicio y su propia área: un solo facade por sesión autenticada.
     providers: [
@@ -41,6 +47,9 @@ export const routes: Routes = [
       { provide: PayoutRepository, useClass: PayoutHttpRepository },
       { provide: QuotationRepository, useClass: QuotationHttpRepository },
       { provide: RfiRepository, useClass: RfiHttpRepository },
+      { provide: ActivityRepository, useClass: ActivityHttpRepository },
+      { provide: PlatformRepository, useClass: PlatformHttpRepository },
+      UnreadNotifications,
     ],
     children: [
       {
@@ -104,6 +113,42 @@ export const routes: Routes = [
         title: 'Pago' + TITLE_SUFFIX,
         loadComponent: () =>
           import('./domains/payouts/presentation/payout-detail-page').then((m) => m.PayoutDetailPage),
+      },
+      {
+        path: 'avisos',
+        title: 'Avisos' + TITLE_SUFFIX,
+        loadComponent: () =>
+          import('./domains/activity/presentation/notifications-page').then((m) => m.NotificationsPage),
+      },
+      {
+        path: 'eventos',
+        title: 'Eventos del proveedor' + TITLE_SUFFIX,
+        canMatch: [capabilityGuard('activity.audit')],
+        loadComponent: () => import('./domains/activity/presentation/events-page').then((m) => m.EventsPage),
+      },
+      {
+        path: 'auditoria',
+        title: 'Auditoría' + TITLE_SUFFIX,
+        canMatch: [capabilityGuard('activity.audit')],
+        loadComponent: () => import('./domains/activity/presentation/audit-page').then((m) => m.AuditPage),
+      },
+      {
+        path: 'operaciones',
+        title: 'Operaciones' + TITLE_SUFFIX,
+        canMatch: [capabilityGuard('platform.console')],
+        loadComponent: () => import('./domains/platform/presentation/operations-page').then((m) => m.OperationsPage),
+      },
+      {
+        path: 'operaciones/:id',
+        title: 'Ficha del cliente' + TITLE_SUFFIX,
+        canMatch: [capabilityGuard('platform.console')],
+        loadComponent: () =>
+          import('./domains/platform/presentation/tenant-360-page').then((m) => m.Tenant360Page),
+      },
+      {
+        path: 'seguridad',
+        title: 'Seguridad' + TITLE_SUFFIX,
+        loadComponent: () => import('./core/auth/presentation/security-page').then((m) => m.SecurityPage),
       },
       {
         path: 'solicitudes',

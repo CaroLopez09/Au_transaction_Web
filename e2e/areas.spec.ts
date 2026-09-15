@@ -8,10 +8,18 @@ const AREAS = [
   { path: '/destinatarios', heading: 'Destinatarios' },
   { path: '/pagos', heading: 'Pagos' },
   { path: '/solicitudes', heading: 'Solicitudes de información' },
+  { path: '/avisos', heading: 'Avisos' },
+  { path: '/eventos', heading: 'Eventos del proveedor' },
+  { path: '/auditoria', heading: 'Auditoría' },
 ];
 
+const NAV_LABEL: Record<string, string> = {
+  'Solicitudes de información': 'Solicitudes',
+  'Eventos del proveedor': 'Eventos',
+};
+
 test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
-  test('la navegación ofrece las siete áreas y cada una carga sin errores ni violaciones de accesibilidad', async ({
+  test('la navegación ofrece las áreas del rol y cada una carga sin errores ni violaciones de accesibilidad', async ({
     page,
   }) => {
     const errors = collectConsoleErrors(page);
@@ -27,11 +35,15 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
       'Destinatarios',
       'Pagos',
       'Solicitudes',
+      'Avisos',
+      'Eventos',
+      'Auditoría',
+      'Seguridad',
     ]);
     for (const area of AREAS) {
       await nav
         .getByRole('link', {
-          name: area.heading === 'Solicitudes de información' ? 'Solicitudes' : area.heading,
+          name: NAV_LABEL[area.heading] ?? area.heading,
           exact: true,
         })
         .click();

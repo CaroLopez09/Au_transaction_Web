@@ -20,6 +20,10 @@ export const CAPABILITY_ROLES = {
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
   /** POST /api/rfis/sync, /refresh, PATCH items, documentos */
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** GET /api/events, GET /api/audit */
+  'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** GET /api/platform/** (consola multiempresa) */
+  'platform.console': ['PLATFORM_OPERATOR'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Capability = keyof typeof CAPABILITY_ROLES;

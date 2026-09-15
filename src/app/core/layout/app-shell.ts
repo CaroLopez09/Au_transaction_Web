@@ -6,7 +6,8 @@ import { AuLogo } from '../../shared/ui/au-logo';
 import { Icon } from '../../shared/ui/icon';
 import { SIGN_IN_PATH } from '../auth/auth.guards';
 import { SessionStore } from '../auth/session.store';
-import { roleLabel } from '../permissions/role';
+import { isPlatformRole, roleLabel } from '../permissions/role';
+import { UnreadNotifications } from '../../domains/activity/presentation/unread-notifications';
 import { NAVIGATION } from './navigation';
 
 @Component({
@@ -19,6 +20,7 @@ import { NAVIGATION } from './navigation';
 export class AppShell {
   private readonly session = inject(SessionStore);
   private readonly router = inject(Router);
+  protected readonly unread = inject(UnreadNotifications);
 
   protected readonly menuOpen = signal(false);
   protected readonly operator = this.session.operator;
@@ -26,11 +28,18 @@ export class AppShell {
     () => this.session.session()?.tenantName ?? this.session.operator()?.tenantId ?? '',
   );
   protected readonly roleName = computed(() => roleLabel(this.session.role()));
-  protected readonly items = computed(() =>
-    NAVIGATION.filter((item) => item.requires === null || this.session.can(item.requires)),
-  );
+  protected readonly items = computed(() => {
+    // La plataforma solo ve la consola; las empresas, todo lo suyo menos la consola.
+    if (isPlatformRole(this.session.role())) {
+      return NAVIGATION.filter((item) => item.requires === 'platform.console');
+    }
+    return NAVIGATION.filter((item) => item.requires === null || this.session.can(item.requires));
+  });
 
   constructor() {
+    if (!isPlatformRole(this.session.role())) {
+      this.unread.start();
+    }
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),

@@ -37,6 +37,9 @@
         >
           <au-icon [name]="item.icon" />
           {{ item.label }}
+          @if (item.path === '/avisos' && unread.count() > 0) {
+            <span class="badge" [attr.aria-label]="unread.count() + ' avisos sin leer'">{{ unread.count() }}</span>
+          }
         </a>
       </li>
     }
@@ -47,6 +50,10 @@
       <au-icon name="person" [size]="16" />
       <span>{{ operator()?.email }}</span>
     </p>
+    <a class="sign-out" routerLink="/seguridad" routerLinkActive="active">
+      <au-icon name="shield" [size]="16" />
+      Seguridad
+    </a>
     <button type="button" class="sign-out" (click)="signOut()">
       <au-icon name="sign-out" [size]="16" />
       Cerrar sesión

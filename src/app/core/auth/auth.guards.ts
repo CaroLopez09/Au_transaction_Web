@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
-import { CanMatchFn, Router, UrlSegment } from '@angular/router';
+import { CanActivateChildFn, CanMatchFn, Router, UrlSegment } from '@angular/router';
 import { Capability } from '../permissions/capabilities';
+import { isPlatformRole } from '../permissions/role';
 import { SessionStore } from './session.store';
 
 export const SIGN_IN_PATH = '/ingresar';
@@ -26,6 +27,23 @@ export const guestGuard: CanMatchFn = () => {
 export function capabilityGuard(capability: Capability): CanMatchFn {
   return () => inject(SessionStore).can(capability) || inject(Router).createUrlTree(['/']);
 }
+
+/** Áreas a las que entra un operador de la plataforma; el resto son de empresa. */
+const PLATFORM_AREAS = ['/operaciones', '/seguridad'];
+
+/**
+ * Un operador de la plataforma no tiene empresa: las áreas de empresa le devolverían vacíos o
+ * errores, así que se le lleva a la consola. A la inversa, `platform.console` protege la consola.
+ */
+export const audienceGuard: CanActivateChildFn = (_child, state) => {
+  const session = inject(SessionStore);
+  if (!isPlatformRole(session.role())) {
+    return true;
+  }
+  return PLATFORM_AREAS.some((area) => state.url === area || state.url.startsWith(area + '/'))
+    ? true
+    : inject(Router).createUrlTree(['/operaciones']);
+};
 
 /** Solo rutas internas: evita redirecciones abiertas con `?volver=https://…` o `//host`. */
 export function safeReturnUrl(candidate: string | null | undefined): string {

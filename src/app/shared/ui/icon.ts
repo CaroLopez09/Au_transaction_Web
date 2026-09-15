@@ -25,6 +25,10 @@ const ICONS = {
   payouts: 'M12 19.5v-11M7.5 13l4.5-4.5 4.5 4.5M4.5 4.5h15',
   rfis: 'M5.5 3.5h9l4 4v13h-13zM14.5 3.5v4h4M9 12h6M9 15.5h6',
   history: 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4M12 8v4.5l3 2',
+  shield: 'M12 3.5 19 6v5.5c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6zM9 12l2 2 4-4',
+  bell: 'M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0',
+  activity: 'M3.5 12h4l2.5-6 4 12 2.5-6h4',
+  building: 'M5 20.5V4.5h9v16M14 9.5h5v11M8 8h3M8 11.5h3M8 15h3M3.5 20.5h17',
 } as const;
 
 export type IconName = keyof typeof ICONS;

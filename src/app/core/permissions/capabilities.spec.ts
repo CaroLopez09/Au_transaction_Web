@@ -10,6 +10,8 @@ const EXPECTED: Record<Capability, readonly Role[]> = {
   'payouts.prepare': ['ADMIN', 'TREASURY_MAKER'],
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'platform.console': ['PLATFORM_OPERATOR'],
 };
 
 describe('roleCan', () => {

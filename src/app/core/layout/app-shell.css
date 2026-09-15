@@ -127,6 +127,7 @@
 }
 
 .sign-out {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: var(--au-space-2);
@@ -231,4 +232,17 @@
   .content {
     padding: var(--au-space-6) var(--au-space-4) var(--au-space-12);
   }
+}
+
+.badge {
+  margin-left: auto;
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--au-critical, #c0392b);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4rem;
+  text-align: center;
 }
