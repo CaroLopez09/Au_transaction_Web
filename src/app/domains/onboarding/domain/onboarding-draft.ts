@@ -25,6 +25,13 @@ export interface CompanySection {
   readonly formation_date: string;
   readonly formation_country: string;
   readonly formation_state: string;
+  /** Slug NAICS del catálogo del proveedor (INDUSTRIES). Se envía como arreglo de un elemento. */
+  readonly business_industry: string;
+  /** Identificador tributario de la empresa (NIT, RFC…) y país que lo emite (ISO alfa-3). */
+  readonly document_number: string;
+  readonly document_country: string;
+  /** Tipo de entidad en su país, en texto libre. Solo para empresas no constituidas en EE. UU. */
+  readonly international_entity_type: string;
   readonly registered_address: AddressSection;
 }
 
@@ -46,8 +53,11 @@ export interface ActivitySection {
   readonly high_risk_industries: string;
   readonly is_nbfi_vasp: string;
   readonly business_legal_history: string;
-  /** "true" | "false" | "" (booleano del proveedor, guardado como texto del control). */
-  readonly has_material_intermediary_ownership: string;
+  /** "true" | "false" | "" — si algún socio, directivo o representante es persona expuesta políticamente. */
+  readonly pep_status: string;
+  /** "Yes" | "No" | "" — additional_info del proveedor, sensible a mayúsculas. */
+  readonly has_us_bank_account: string;
+  readonly has_denied_bank_account: string;
 }
 
 export interface RepresentativeSection {
@@ -83,6 +93,10 @@ export const EMPTY_DRAFT: OnboardingDraft = {
     formation_date: '',
     formation_country: '',
     formation_state: '',
+    business_industry: '',
+    document_number: '',
+    document_country: '',
+    international_entity_type: '',
     registered_address: EMPTY_ADDRESS,
   },
   activity: {
@@ -93,7 +107,9 @@ export const EMPTY_DRAFT: OnboardingDraft = {
     high_risk_industries: '',
     is_nbfi_vasp: '',
     business_legal_history: '',
-    has_material_intermediary_ownership: '',
+    pep_status: '',
+    has_us_bank_account: '',
+    has_denied_bank_account: '',
   },
   representative: {
     representative_first_name: '',
@@ -168,6 +184,10 @@ export function companyGaps(company: CompanySection): string[] {
   if (!company.business_type) gaps.push('Tipo de sociedad');
   if (!company.formation_date) gaps.push('Fecha de constitución');
   if (!ISO_ALPHA3.test(company.formation_country)) gaps.push('País de constitución');
+  if (!company.business_industry) gaps.push('Industria');
+  if (!company.document_number.trim()) gaps.push('Identificador tributario');
+  if (!ISO_ALPHA3.test(company.document_country)) gaps.push('País que emite el identificador tributario');
+  if (isInternational(company) && !company.international_entity_type.trim()) gaps.push('Tipo de entidad en su país');
   if (company.phone && !E164_PATTERN.test(company.phone)) gaps.push('Teléfono en formato internacional');
   const address = company.registered_address;
   if (!address.street_line_1.trim() || !address.city.trim() || !ISO_ALPHA3.test(address.country)) {
@@ -185,7 +205,15 @@ export function activityGaps(activity: ActivitySection): string[] {
   if (!activity.high_risk_industries) gaps.push('Industrias de alto riesgo');
   if (!activity.is_nbfi_vasp) gaps.push('Institución financiera no bancaria o proveedor de activos virtuales');
   if (!activity.business_legal_history) gaps.push('Antecedentes legales');
+  if (!activity.pep_status) gaps.push('Personas expuestas políticamente');
+  if (!activity.has_us_bank_account) gaps.push('Cuenta bancaria en EE. UU.');
+  if (!activity.has_denied_bank_account) gaps.push('Cuentas bancarias denegadas');
   return gaps;
+}
+
+/** El proveedor pide datos adicionales a las empresas no constituidas en EE. UU. */
+export function isInternational(company: CompanySection): boolean {
+  return ISO_ALPHA3.test(company.formation_country) && company.formation_country.toUpperCase() !== 'USA';
 }
 
 export function representativeGaps(representative: RepresentativeSection): string[] {
@@ -244,6 +272,10 @@ export function toProfile(draft: OnboardingDraft): Record<string, unknown> {
   put('formation_date', c.formation_date);
   put('formation_state', c.formation_state);
   if (c.formation_country.trim()) profile['formation_country'] = c.formation_country.trim().toUpperCase();
+  if (c.business_industry) profile['business_industry'] = [c.business_industry];
+  put('document_number', c.document_number);
+  if (c.document_country.trim()) profile['document_country'] = c.document_country.trim().toUpperCase();
+  if (isInternational(c)) put('international_entity_type', c.international_entity_type);
   const address = Object.fromEntries(
     Object.entries(c.registered_address)
       .filter(([, value]) => value.trim())
@@ -259,9 +291,11 @@ export function toProfile(draft: OnboardingDraft): Record<string, unknown> {
   put('high_risk_industries', a.high_risk_industries);
   put('is_nbfi_vasp', a.is_nbfi_vasp);
   put('business_legal_history', a.business_legal_history);
-  if (a.has_material_intermediary_ownership) {
-    profile['has_material_intermediary_ownership'] = a.has_material_intermediary_ownership === 'true';
-  }
+  if (a.pep_status) profile['pep_status'] = a.pep_status === 'true';
+  const additionalInfo: Record<string, string> = {};
+  if (a.has_us_bank_account) additionalInfo['has_us_bank_account'] = a.has_us_bank_account;
+  if (a.has_denied_bank_account) additionalInfo['has_denied_bank_account'] = a.has_denied_bank_account;
+  if (Object.keys(additionalInfo).length) profile['additional_info'] = additionalInfo;
 
   const r = draft.representative;
   put('representative_first_name', r.representative_first_name);
@@ -309,6 +343,12 @@ const COMPANY_FIELDS = new Set([
   'formation_date',
   'formation_country',
   'formation_state',
+  'business_industry',
+  'document_number',
+  'document_country',
+  'international_entity_type',
+  'tax_id',
+  'ein',
   'registered_address',
   'physical_address',
   'address_street',
@@ -327,7 +367,7 @@ const ACTIVITY_FIELDS = new Set([
   'high_risk_industries',
   'is_nbfi_vasp',
   'business_legal_history',
-  'has_material_intermediary_ownership',
-  'business_industry',
+  'pep_status',
+  'additional_info',
   'transaction_countries',
 ]);

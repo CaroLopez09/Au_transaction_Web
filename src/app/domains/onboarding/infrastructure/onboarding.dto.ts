@@ -9,6 +9,7 @@ export interface OnboardingViewDto {
   name: string;
   kiraUserId?: string;
   status: string;
+  rejectionReason?: string;
   verificationTriggered: boolean;
   pendingFields?: string[];
   eligibleProducts?: EligibleProductDto[];
@@ -25,10 +26,21 @@ export interface EligibleProductDto {
 }
 
 /** application/tenant/UboView */
+/** domain/shared/PostalAddress (dirección de residencia de un UBO, país ISO-3). */
+export interface ResidentialAddressDto {
+  streetName?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface UboViewDto {
   id: string;
   personReferenceId?: string;
   fullName: string;
+  firstName: string;
+  lastName: string;
   email?: string;
   documentType?: string;
   documentNumber?: string;
@@ -40,6 +52,14 @@ export interface UboViewDto {
   politicallyExposed: boolean;
   countryOfBirth?: string;
   roleInCompany?: string;
+  birthDate?: string;
+  nationality?: string;
+  occupation?: string;
+  gender?: string;
+  phoneNumber?: string;
+  documentCountry?: string;
+  address?: ResidentialAddressDto;
+  knownToKira: boolean;
   livenessStatus?: string;
   livenessLink?: string;
   livenessExpiresAt?: string;
@@ -60,6 +80,13 @@ export interface SaveUboDto {
   politicallyExposed: boolean;
   countryOfBirth: string;
   roleInCompany?: string;
+  birthDate?: string;
+  nationality?: string;
+  occupation?: string;
+  gender?: string;
+  phoneNumber?: string;
+  documentCountry?: string;
+  address?: ResidentialAddressDto;
 }
 
 /** application/tenant/UboView.Roster */

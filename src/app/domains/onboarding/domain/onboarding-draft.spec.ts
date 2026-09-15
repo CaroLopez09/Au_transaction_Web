@@ -32,7 +32,8 @@ const fixtureDraft = (): OnboardingDraft => ({
   activity: {
     ...EMPTY_DRAFT.activity,
     source_of_funds: 'sales_of_goods_and_services',
-    has_material_intermediary_ownership: 'false',
+    pep_status: 'false',
+    has_us_bank_account: 'No',
   },
 });
 
@@ -46,9 +47,37 @@ describe('borrador de vinculación', () => {
       formation_country: 'COL',
       registered_address: { street_line_1: 'Cra 7 # 71-21', city: 'Bogotá', country: 'COL' },
       source_of_funds: 'sales_of_goods_and_services',
-      has_material_intermediary_ownership: false,
+      pep_status: false,
+      additional_info: { has_us_bank_account: 'No' },
     });
     expect(toProfile(EMPTY_DRAFT)).toEqual({});
+  });
+
+  it('una empresa extranjera envía industria, identificador tributario y tipo de entidad', () => {
+    const draft = fixtureDraft();
+    const profile = toProfile({
+      ...draft,
+      company: {
+        ...draft.company,
+        business_industry: 'professional_scientific_technical',
+        document_number: '900123456',
+        document_country: 'col',
+        international_entity_type: 'SAS',
+      },
+    });
+    expect(profile['business_industry']).toEqual(['professional_scientific_technical']);
+    expect(profile['document_number']).toBe('900123456');
+    expect(profile['document_country']).toBe('COL');
+    expect(profile['international_entity_type']).toBe('SAS');
+  });
+
+  it('una empresa de EE. UU. no envía el tipo de entidad internacional', () => {
+    const draft = fixtureDraft();
+    const profile = toProfile({
+      ...draft,
+      company: { ...draft.company, formation_country: 'USA', international_entity_type: 'LLC' },
+    });
+    expect('international_entity_type' in profile).toBe(false);
   });
 
   it('lee borradores viejos, parciales o con basura sin romper', () => {
@@ -73,10 +102,21 @@ describe('borrador de vinculación', () => {
   });
 
   it('indica qué falta por paso y valida formatos', () => {
-    const company = { ...fixtureDraft().company, phone: '300 123' };
+    const company = {
+      ...fixtureDraft().company,
+      phone: '300 123',
+      business_industry: 'real_estate',
+      document_number: '900123456',
+      document_country: 'COL',
+      international_entity_type: 'SAS',
+    };
     expect(companyGaps(company)).toEqual(['Teléfono en formato internacional']);
     expect(companyGaps({ ...company, phone: '+573001234567', formation_country: 'CO' })).toEqual([
       'País de constitución',
+    ]);
+    // Constituida fuera de EE. UU.: el proveedor pide el tipo de entidad local.
+    expect(companyGaps({ ...company, phone: '', international_entity_type: '' })).toEqual([
+      'Tipo de entidad en su país',
     ]);
     expect(activityGaps(fixtureDraft().activity)).toContain('Propósito de la cuenta');
   });

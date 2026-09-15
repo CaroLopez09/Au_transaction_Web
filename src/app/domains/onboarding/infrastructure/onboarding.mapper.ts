@@ -1,8 +1,16 @@
-import { BeneficialOwner, OwnershipRoster, parseLivenessStatus, SaveBeneficialOwner } from '../domain/beneficial-owner';
+import {
+  BeneficialOwner,
+  Gender,
+  OwnershipRoster,
+  parseLivenessStatus,
+  ResidentialAddress,
+  SaveBeneficialOwner,
+} from '../domain/beneficial-owner';
 import { EligibleProduct, OnboardingStatus, parseKybStatus } from '../domain/onboarding-status';
 import {
   EligibleProductDto,
   OnboardingDraftViewDto,
+  ResidentialAddressDto,
   OnboardingViewDto,
   SaveUboDto,
   UboRosterDto,
@@ -19,6 +27,7 @@ export function toOnboardingStatus(dto: OnboardingViewDto): OnboardingStatus {
     providerUserId: dto.kiraUserId ?? null,
     status: parseKybStatus(dto.status),
     rawStatus: dto.status,
+    rejectionReason: dto.rejectionReason ?? null,
     verificationTriggered: dto.verificationTriggered,
     pendingFields: dto.pendingFields ?? [],
     eligibleProducts: (dto.eligibleProducts ?? []).map(toEligibleProduct),
@@ -49,6 +58,8 @@ export function toBeneficialOwner(dto: UboViewDto): BeneficialOwner {
   return {
     id: dto.id,
     fullName: dto.fullName,
+    firstName: dto.firstName,
+    lastName: dto.lastName,
     email: dto.email ?? null,
     documentType: dto.documentType ?? null,
     documentNumber: dto.documentNumber ?? null,
@@ -60,6 +71,14 @@ export function toBeneficialOwner(dto: UboViewDto): BeneficialOwner {
     politicallyExposed: dto.politicallyExposed,
     countryOfBirth: dto.countryOfBirth ?? null,
     roleInCompany: dto.roleInCompany ?? null,
+    birthDate: dto.birthDate ?? null,
+    nationality: dto.nationality ?? null,
+    occupation: dto.occupation ?? null,
+    gender: parseGender(dto.gender),
+    phoneNumber: dto.phoneNumber ?? null,
+    documentCountry: dto.documentCountry ?? null,
+    address: toAddress(dto.address),
+    knownToProvider: dto.knownToKira,
     liveness: {
       status: parseLivenessStatus(dto.livenessStatus),
       link: dto.livenessLink ?? null,
@@ -68,9 +87,31 @@ export function toBeneficialOwner(dto: UboViewDto): BeneficialOwner {
   };
 }
 
-/** Opcionales vacíos no viajan: el BFF distingue "sin documento" de un texto en blanco. */
+function parseGender(raw: string | undefined): Gender | null {
+  return raw === 'male' || raw === 'female' || raw === 'other' ? raw : null;
+}
+
+function toAddress(dto: ResidentialAddressDto | undefined): ResidentialAddress | null {
+  if (!dto) {
+    return null;
+  }
+  return {
+    streetName: dto.streetName ?? null,
+    city: dto.city ?? null,
+    state: dto.state ?? null,
+    postalCode: dto.postalCode ?? null,
+    country: dto.country ?? null,
+  };
+}
+
+/** Opcionales vacíos no viajan: el BFF distingue "sin dato" de un texto en blanco. */
 export function toSaveUboDto(command: SaveBeneficialOwner): SaveUboDto {
-  const common = {
+  const address = toAddressDto(command.address);
+  return {
+    ...(command.id ? { id: command.id } : {}),
+    firstName: command.firstName.trim(),
+    lastName: command.lastName.trim(),
+    ...optional('roleInCompany', command.roleInCompany),
     ...optional('email', command.email),
     ...optional('documentType', command.documentType),
     ...optional('documentNumber', command.documentNumber),
@@ -80,30 +121,28 @@ export function toSaveUboDto(command: SaveBeneficialOwner): SaveUboDto {
     isSigner: command.isSigner,
     politicallyExposed: command.politicallyExposed,
     countryOfBirth: command.countryOfBirth.trim().toUpperCase(),
+    ...optional('birthDate', command.birthDate),
+    ...optional('nationality', command.nationality?.toUpperCase() ?? null),
+    ...optional('occupation', command.occupation),
+    ...optional('gender', command.gender),
+    ...optional('phoneNumber', command.phoneNumber),
+    ...optional('documentCountry', command.documentCountry?.toUpperCase() ?? null),
+    ...(address ? { address } : {}),
   };
-  if (command.kind === 'register') {
-    return {
-      firstName: command.firstName.trim(),
-      lastName: command.lastName.trim(),
-      ...optional('roleInCompany', command.roleInCompany),
-      ...common,
-    };
-  }
-  return { id: command.id, ...nameFieldsForUpdate(command.fullName), ...common };
 }
 
-/**
- * En edición el BFF valida `firstName`/`lastName` como obligatorios pero no los aplica
- * (SyncUbosService.save solo los usa al crear) y la vista solo expone `fullName`.
- * Se reenvía el nombre vigente repartido en la primera separación para superar la validación;
- * el backend lo ignora (gap G-21). `roleInCompany` tampoco se aplica y no se envía.
- */
-export function nameFieldsForUpdate(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim();
-  const separator = trimmed.indexOf(' ');
-  return separator === -1
-    ? { firstName: trimmed, lastName: trimmed }
-    : { firstName: trimmed.slice(0, separator), lastName: trimmed.slice(separator + 1) };
+function toAddressDto(address: ResidentialAddress | null): ResidentialAddressDto | null {
+  if (!address) {
+    return null;
+  }
+  const dto: ResidentialAddressDto = {
+    ...optional('streetName', address.streetName),
+    ...optional('city', address.city),
+    ...optional('state', address.state),
+    ...optional('postalCode', address.postalCode),
+    ...optional('country', address.country?.toUpperCase() ?? null),
+  };
+  return Object.keys(dto).length ? dto : null;
 }
 
 function optional<K extends string>(key: K, value: string | null): Partial<Record<K, string>> {

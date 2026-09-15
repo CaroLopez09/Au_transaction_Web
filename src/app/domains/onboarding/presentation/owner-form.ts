@@ -14,6 +14,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { UserFacingError } from '../../../core/http/error-mapping';
@@ -24,10 +25,12 @@ import { OnboardingFacade } from '../application/onboarding.facade';
 import {
   BENEFICIAL_OWNER_THRESHOLD,
   BeneficialOwner,
-  BeneficialOwnerRole,
+  Gender,
   qualifiesAsBeneficialOwner,
   SaveBeneficialOwner,
 } from '../domain/beneficial-owner';
+import { PERSON_ID_TYPES } from '../domain/kyb-catalog';
+import { E164_PATTERN } from '../domain/onboarding-draft';
 
 type CatalogState =
   { status: 'loading' } | { status: 'available'; countries: readonly Country[] } | { status: 'unavailable' };
@@ -45,7 +48,22 @@ type FieldName =
   | 'politicallyExposed'
   | 'countryOfBirth'
   | 'documentType'
-  | 'documentNumber';
+  | 'documentNumber'
+  | 'documentCountry'
+  | 'birthDate'
+  | 'nationality'
+  | 'occupation'
+  | 'gender'
+  | 'phoneNumber'
+  | 'addressStreet'
+  | 'addressCity'
+  | 'addressState'
+  | 'addressPostalCode'
+  | 'addressCountry';
+
+type CountryField = 'countryOfBirth' | 'nationality' | 'documentCountry' | 'addressCountry';
+
+const ISO3_MESSAGE = 'Usa el código ISO de tres letras, por ejemplo COL.';
 
 const CLIENT_MESSAGES: Record<FieldName, Partial<Record<string, string>>> = {
   firstName: { required: 'Escribe el nombre.' },
@@ -68,7 +86,24 @@ const CLIENT_MESSAGES: Record<FieldName, Partial<Record<string, string>>> = {
   },
   documentType: {},
   documentNumber: {},
+  documentCountry: { pattern: ISO3_MESSAGE },
+  birthDate: { future: 'La fecha de nacimiento no puede ser futura.' },
+  nationality: { pattern: ISO3_MESSAGE },
+  occupation: { maxlength: 'Máximo 100 caracteres.' },
+  gender: {},
+  phoneNumber: { pattern: 'Usa el formato internacional, por ejemplo +573001234567.' },
+  addressStreet: {},
+  addressCity: {},
+  addressState: {},
+  addressPostalCode: {},
+  addressCountry: { pattern: ISO3_MESSAGE },
 };
+
+/** @Past del BFF. */
+function notInFuture(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value;
+  return !value || value <= new Date().toISOString().slice(0, 10) ? null : { future: true };
+}
 
 /** @DecimalMax("100.00") del BFF: dos decimales. */
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {
@@ -79,7 +114,7 @@ function twoDecimals(control: AbstractControl<number | null>): ValidationErrors 
 @Component({
   selector: 'au-owner-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, Icon, Skeleton],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, Icon, Skeleton],
   templateUrl: './owner-form.html',
   styleUrl: './owner-form.css',
 })
@@ -100,6 +135,8 @@ export class OwnerForm implements OnInit {
   protected readonly submitted = signal(false);
   protected readonly serverError = signal<UserFacingError | null>(null);
   protected readonly threshold = BENEFICIAL_OWNER_THRESHOLD;
+  protected readonly idTypes = PERSON_ID_TYPES;
+  protected readonly today = new Date().toISOString().slice(0, 10);
 
   private readonly fb = inject(FormBuilder);
   protected readonly form = this.fb.group({
@@ -118,6 +155,17 @@ export class OwnerForm implements OnInit {
     countryOfBirth: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(ISO_ALPHA3_PATTERN)]),
     documentType: this.fb.nonNullable.control(''),
     documentNumber: this.fb.nonNullable.control(''),
+    documentCountry: this.fb.nonNullable.control('', Validators.pattern(ISO_ALPHA3_PATTERN)),
+    birthDate: this.fb.nonNullable.control('', notInFuture),
+    nationality: this.fb.nonNullable.control('', Validators.pattern(ISO_ALPHA3_PATTERN)),
+    occupation: this.fb.nonNullable.control('', Validators.maxLength(100)),
+    gender: this.fb.nonNullable.control<Gender | ''>(''),
+    phoneNumber: this.fb.nonNullable.control('', Validators.pattern(E164_PATTERN)),
+    addressStreet: this.fb.nonNullable.control(''),
+    addressCity: this.fb.nonNullable.control(''),
+    addressState: this.fb.nonNullable.control(''),
+    addressPostalCode: this.fb.nonNullable.control(''),
+    addressCountry: this.fb.nonNullable.control('', Validators.pattern(ISO_ALPHA3_PATTERN)),
   });
 
   private readonly hasOwnership = toSignal(this.form.controls.hasOwnership.valueChanges, { initialValue: null });
@@ -137,11 +185,21 @@ export class OwnerForm implements OnInit {
   ngOnInit(): void {
     const owner = this.owner();
     if (owner) {
-      // El BFF no aplica nombre ni cargo al editar (G-21): no se ofrecen como editables.
-      this.form.controls.firstName.disable();
-      this.form.controls.lastName.disable();
-      this.form.controls.roleInCompany.disable();
       this.form.patchValue({
+        firstName: owner.firstName,
+        lastName: owner.lastName,
+        roleInCompany: owner.roleInCompany ?? '',
+        documentCountry: owner.documentCountry ?? '',
+        birthDate: owner.birthDate ?? '',
+        nationality: owner.nationality ?? '',
+        occupation: owner.occupation ?? '',
+        gender: owner.gender ?? '',
+        phoneNumber: owner.phoneNumber ?? '',
+        addressStreet: owner.address?.streetName ?? '',
+        addressCity: owner.address?.city ?? '',
+        addressState: owner.address?.state ?? '',
+        addressPostalCode: owner.address?.postalCode ?? '',
+        addressCountry: owner.address?.country ?? '',
         hasOwnership: owner.hasOwnership,
         ownershipPercentage: owner.ownershipPercentage,
         hasControl: owner.hasControl,
@@ -160,8 +218,8 @@ export class OwnerForm implements OnInit {
     void this.loadCountries();
   }
 
-  protected countryOptions(countries: readonly Country[]): readonly Country[] {
-    const current = this.form.controls.countryOfBirth.value.toUpperCase();
+  protected countryOptions(countries: readonly Country[], field: CountryField): readonly Country[] {
+    const current = this.form.controls[field].value.toUpperCase();
     if (!current || countries.some((country) => country.alpha3 === current)) {
       return countries;
     }
@@ -219,10 +277,15 @@ export class OwnerForm implements OnInit {
 
   private toCommand(): SaveBeneficialOwner {
     const value = this.form.getRawValue();
-    const role: BeneficialOwnerRole = {
-      email: value.email.trim() || null,
+    const text = (raw: string) => raw.trim() || null;
+    return {
+      id: this.owner()?.id ?? null,
+      firstName: value.firstName,
+      lastName: value.lastName,
+      roleInCompany: text(value.roleInCompany),
+      email: text(value.email),
       documentType: value.documentType || null,
-      documentNumber: value.documentNumber || null,
+      documentNumber: text(value.documentNumber),
       hasOwnership: value.hasOwnership === true,
       // Sin participación declarada el porcentaje no cuenta para el proveedor; el BFF exige un número.
       ownershipPercentage: value.hasOwnership ? (value.ownershipPercentage ?? 0) : 0,
@@ -230,17 +293,23 @@ export class OwnerForm implements OnInit {
       isSigner: value.isSigner === true,
       politicallyExposed: value.politicallyExposed === true,
       countryOfBirth: value.countryOfBirth,
+      birthDate: value.birthDate || null,
+      nationality: text(value.nationality),
+      occupation: text(value.occupation),
+      gender: value.gender || null,
+      phoneNumber: text(value.phoneNumber),
+      documentCountry: text(value.documentCountry),
+      address: [value.addressStreet, value.addressCity, value.addressState, value.addressPostalCode, value.addressCountry]
+        .some((part) => part.trim())
+        ? {
+            streetName: text(value.addressStreet),
+            city: text(value.addressCity),
+            state: text(value.addressState),
+            postalCode: text(value.addressPostalCode),
+            country: text(value.addressCountry),
+          }
+        : null,
     };
-    const owner = this.owner();
-    return owner
-      ? { kind: 'update', id: owner.id, fullName: owner.fullName, ...role }
-      : {
-          kind: 'register',
-          firstName: value.firstName,
-          lastName: value.lastName,
-          roleInCompany: value.roleInCompany || null,
-          ...role,
-        };
   }
 
   private syncPercentageAvailability(hasOwnership: boolean | null): void {

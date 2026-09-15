@@ -99,10 +99,17 @@ export class ActivityStep {
     },
     { key: 'business_legal_history', label: '¿La empresa tiene antecedentes legales?', yes: 'Yes', no: 'No' },
     {
-      key: 'has_material_intermediary_ownership',
-      label: '¿Parte de la propiedad se tiene a través de sociedades intermedias?',
+      key: 'pep_status',
+      label: '¿Algún socio, directivo o representante es persona expuesta políticamente?',
       yes: 'true',
       no: 'false',
+    },
+    { key: 'has_us_bank_account', label: '¿La empresa tiene cuenta bancaria en EE. UU.?', yes: 'Yes', no: 'No' },
+    {
+      key: 'has_denied_bank_account',
+      label: '¿A la empresa le han negado o cerrado una cuenta bancaria?',
+      yes: 'Yes',
+      no: 'No',
     },
   ] as const;
 
@@ -115,7 +122,9 @@ export class ActivityStep {
     high_risk_industries: [''],
     is_nbfi_vasp: [''],
     business_legal_history: [''],
-    has_material_intermediary_ownership: [''],
+    pep_status: [''],
+    has_us_bank_account: [''],
+    has_denied_bank_account: [''],
   });
   protected readonly gaps = computed(() => activityGaps(this.value()));
 

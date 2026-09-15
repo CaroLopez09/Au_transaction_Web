@@ -7,10 +7,22 @@ export interface LivenessCheck {
   readonly expiresAt: Date | null;
 }
 
+/** Dirección de residencia de una persona. País en ISO-3166 alfa-3. */
+export interface ResidentialAddress {
+  readonly streetName: string | null;
+  readonly city: string | null;
+  readonly state: string | null;
+  readonly postalCode: string | null;
+  readonly country: string | null;
+}
+
+export type Gender = 'male' | 'female' | 'other';
+
 export interface BeneficialOwner {
   readonly id: string;
-  /** La vista del BFF solo trae el nombre completo (UboView.fullName), no nombre y apellido por separado. */
   readonly fullName: string;
+  readonly firstName: string;
+  readonly lastName: string;
   /** Kira empareja a cada persona por correo: sin él no se le pueden subir documentos. */
   readonly email: string | null;
   readonly documentType: string | null;
@@ -25,6 +37,19 @@ export interface BeneficialOwner {
   /** ISO-3166 alfa-3. */
   readonly countryOfBirth: string | null;
   readonly roleInCompany: string | null;
+  /** AAAA-MM-DD. Lo pide el proveedor para verificar a la persona (`associated_persons:birth_date`). */
+  readonly birthDate: string | null;
+  /** ISO-3166 alfa-3 (`associated_persons:nationality`). */
+  readonly nationality: string | null;
+  readonly occupation: string | null;
+  readonly gender: Gender | null;
+  /** E.164. */
+  readonly phoneNumber: string | null;
+  /** País que emitió el documento, ISO-3166 alfa-3. */
+  readonly documentCountry: string | null;
+  readonly address: ResidentialAddress | null;
+  /** Ya registrado en el proveedor: desde el portal solo se corrige, no se borra. */
+  readonly knownToProvider: boolean;
   readonly liveness: LivenessCheck;
 }
 
@@ -49,15 +74,12 @@ export function parseLivenessStatus(raw: string | null | undefined): LivenessSta
   }
 }
 
-/**
- * Alta (sin `id`) o edición (con `id`) local de un beneficiario — POST /api/ubos.
- * En edición el BFF solo actualiza documento, participación, control, firma, PEP y país:
- * nombre, apellido y cargo quedan como se dieron de alta (gap G-21).
- */
-export type SaveBeneficialOwner = RegisterBeneficialOwner | UpdateBeneficialOwner;
-
-/** Datos que el BFF sí actualiza en ambos casos. */
-export interface BeneficialOwnerRole {
+/** Alta (`id` nulo) o edición (con `id`) local de un beneficiario — POST /api/ubos. */
+export interface SaveBeneficialOwner {
+  readonly id: string | null;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly roleInCompany: string | null;
   readonly email: string | null;
   readonly documentType: string | null;
   readonly documentNumber: string | null;
@@ -67,20 +89,13 @@ export interface BeneficialOwnerRole {
   readonly isSigner: boolean;
   readonly politicallyExposed: boolean;
   readonly countryOfBirth: string;
-}
-
-export interface RegisterBeneficialOwner extends BeneficialOwnerRole {
-  readonly kind: 'register';
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly roleInCompany: string | null;
-}
-
-export interface UpdateBeneficialOwner extends BeneficialOwnerRole {
-  readonly kind: 'update';
-  readonly id: string;
-  /** Nombre vigente; el BFF no permite cambiarlo. */
-  readonly fullName: string;
+  readonly birthDate: string | null;
+  readonly nationality: string | null;
+  readonly occupation: string | null;
+  readonly gender: Gender | null;
+  readonly phoneNumber: string | null;
+  readonly documentCountry: string | null;
+  readonly address: ResidentialAddress | null;
 }
 
 /** Ubo.BENEFICIAL_OWNER_THRESHOLD del BFF: con propiedad declarada y ≥ 5 % cuenta como beneficiario final. */

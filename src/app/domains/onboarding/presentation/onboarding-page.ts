@@ -127,7 +127,7 @@ export class OnboardingPage implements OnInit {
   protected readonly registered = computed(() => this.status()?.providerUserId != null);
   protected readonly stage = computed(() => {
     const status = this.status();
-    return status ? stageCopy(onboardingStage(status), status.companyName, this.canManage()) : null;
+    return status ? stageCopy(onboardingStage(status), status, this.canManage()) : null;
   });
   protected readonly canRefresh = computed(() => {
     const status = this.status();

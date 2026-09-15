@@ -13,59 +13,110 @@
     }
   </div>
 
+  <ng-template #countryField let-field="field" let-label="label" let-optional="optional">
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-' + field">
+        {{ label }}
+        @if (optional) {
+          <span class="au-optional">(opcional)</span>
+        }
+      </label>
+      @switch (catalog().status) {
+        @case ('loading') {
+          <au-skeleton height="44px" />
+        }
+        @case ('available') {
+          @if (catalog(); as state) {
+            @if (state.status === 'available') {
+              <select
+                [id]="id + '-' + field"
+                class="au-input"
+                [formControlName]="field"
+                [attr.aria-invalid]="invalid(field)"
+                [attr.aria-describedby]="describedBy(field)"
+              >
+                <option value="" [disabled]="!optional">Selecciona un país</option>
+                @for (country of countryOptions(state.countries, field); track country.alpha3) {
+                  <option [value]="country.alpha3">{{ country.name }}</option>
+                }
+              </select>
+            }
+          }
+        }
+        @case ('unavailable') {
+          <input
+            [id]="id + '-' + field"
+            class="au-input code"
+            [formControlName]="field"
+            maxlength="3"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            [attr.aria-invalid]="invalid(field)"
+            [attr.aria-describedby]="describedBy(field, id + '-' + field + '-help')"
+          />
+          <p class="au-help" [id]="id + '-' + field + '-help'">
+            El listado de países no está disponible en este entorno. Escribe el código ISO de tres letras (COL, MEX,
+            USA…).
+          </p>
+        }
+      }
+      @if (errorFor(field); as message) {
+        <p class="au-field-error" [id]="id + '-' + field + '-error'">{{ message }}</p>
+      }
+    </div>
+  </ng-template>
+
   <section class="group" [attr.aria-labelledby]="id + '-person'">
     <h3 [id]="id + '-person'">Persona</h3>
-    @if (isUpdate()) {
-      <p class="readonly-name">{{ owner()?.fullName }}</p>
-      <p class="au-help">{{ owner()?.roleInCompany ?? 'Cargo no indicado' }}</p>
-      <p class="au-help">El nombre y el cargo no se pueden cambiar después del alta.</p>
-    } @else {
-      <div class="pair">
-        <div class="au-field">
-          <label class="au-label" [for]="id + '-firstName'">Nombre</label>
-          <input
-            [id]="id + '-firstName'"
-            class="au-input"
-            formControlName="firstName"
-            autocomplete="off"
-            [attr.aria-invalid]="invalid('firstName')"
-            [attr.aria-describedby]="describedBy('firstName')"
-          />
-          @if (errorFor('firstName'); as message) {
-            <p class="au-field-error" [id]="id + '-firstName-error'">{{ message }}</p>
-          }
-        </div>
-        <div class="au-field">
-          <label class="au-label" [for]="id + '-lastName'">Apellido</label>
-          <input
-            [id]="id + '-lastName'"
-            class="au-input"
-            formControlName="lastName"
-            autocomplete="off"
-            [attr.aria-invalid]="invalid('lastName')"
-            [attr.aria-describedby]="describedBy('lastName')"
-          />
-          @if (errorFor('lastName'); as message) {
-            <p class="au-field-error" [id]="id + '-lastName-error'">{{ message }}</p>
-          }
-        </div>
+    <div class="pair">
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-firstName'">Nombre</label>
+        <input
+          [id]="id + '-firstName'"
+          class="au-input"
+          formControlName="firstName"
+          autocomplete="off"
+          [attr.aria-invalid]="invalid('firstName')"
+          [attr.aria-describedby]="describedBy('firstName')"
+        />
+        @if (errorFor('firstName'); as message) {
+          <p class="au-field-error" [id]="id + '-firstName-error'">{{ message }}</p>
+        }
       </div>
       <div class="au-field">
-        <label class="au-label" [for]="id + '-roleInCompany'">
-          Cargo en la empresa <span class="au-optional">(opcional)</span>
-        </label>
+        <label class="au-label" [for]="id + '-lastName'">Apellido</label>
         <input
-          [id]="id + '-roleInCompany'"
+          [id]="id + '-lastName'"
           class="au-input"
-          formControlName="roleInCompany"
+          formControlName="lastName"
           autocomplete="off"
-          [attr.aria-describedby]="id + '-roleInCompany-help'"
+          [attr.aria-invalid]="invalid('lastName')"
+          [attr.aria-describedby]="describedBy('lastName')"
         />
-        <p class="au-help" [id]="id + '-roleInCompany-help'">
-          Es solo una etiqueta: no define si la persona es beneficiaria final. Si lo dejas vacío se registra como
-          «Beneficiario Final».
-        </p>
+        @if (errorFor('lastName'); as message) {
+          <p class="au-field-error" [id]="id + '-lastName-error'">{{ message }}</p>
+        }
       </div>
+    </div>
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-roleInCompany'">
+        Cargo en la empresa <span class="au-optional">(opcional)</span>
+      </label>
+      <input
+        [id]="id + '-roleInCompany'"
+        class="au-input"
+        formControlName="roleInCompany"
+        autocomplete="off"
+        [attr.aria-describedby]="id + '-roleInCompany-help'"
+      />
+      <p class="au-help" [id]="id + '-roleInCompany-help'">
+        Es solo una etiqueta: no define si la persona es beneficiaria final. Si lo dejas vacío se registra como
+        «Beneficiario Final».
+      </p>
+    </div>
+    @if (isUpdate()) {
+      <p class="au-help">Si corriges el nombre, el cambio llega al proveedor en el próximo envío de beneficiarios.</p>
     }
     <div class="au-field">
       <label class="au-label" [for]="id + '-email'"
@@ -164,52 +215,37 @@
 
   <section class="group" [attr.aria-labelledby]="id + '-identity'">
     <h3 [id]="id + '-identity'">Identificación</h3>
+    <p class="au-help">
+      Lo que no llenes aquí te lo pedirá el proveedor si el banco lo exige: aparecerá en «Lo pide el proveedor».
+    </p>
 
-    <div class="au-field">
-      <label class="au-label" [for]="id + '-countryOfBirth'">País de nacimiento</label>
-      @switch (catalog().status) {
-        @case ('loading') {
-          <au-skeleton height="44px" />
+    <ng-container
+      [ngTemplateOutlet]="countryField"
+      [ngTemplateOutletContext]="{ field: 'countryOfBirth', label: 'País de nacimiento', optional: false }"
+    />
+
+    <div class="pair">
+      <ng-container
+        [ngTemplateOutlet]="countryField"
+        [ngTemplateOutletContext]="{ field: 'nationality', label: 'Nacionalidad', optional: true }"
+      />
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-birthDate'">
+          Fecha de nacimiento <span class="au-optional">(opcional)</span>
+        </label>
+        <input
+          [id]="id + '-birthDate'"
+          class="au-input"
+          type="date"
+          [max]="today"
+          formControlName="birthDate"
+          [attr.aria-invalid]="invalid('birthDate')"
+          [attr.aria-describedby]="describedBy('birthDate')"
+        />
+        @if (errorFor('birthDate'); as message) {
+          <p class="au-field-error" [id]="id + '-birthDate-error'">{{ message }}</p>
         }
-        @case ('available') {
-          @if (catalog(); as state) {
-            @if (state.status === 'available') {
-              <select
-                [id]="id + '-countryOfBirth'"
-                class="au-input"
-                formControlName="countryOfBirth"
-                [attr.aria-invalid]="invalid('countryOfBirth')"
-                [attr.aria-describedby]="describedBy('countryOfBirth')"
-              >
-                <option value="" disabled>Selecciona un país</option>
-                @for (country of countryOptions(state.countries); track country.alpha3) {
-                  <option [value]="country.alpha3">{{ country.name }}</option>
-                }
-              </select>
-            }
-          }
-        }
-        @case ('unavailable') {
-          <input
-            [id]="id + '-countryOfBirth'"
-            class="au-input code"
-            formControlName="countryOfBirth"
-            maxlength="3"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            [attr.aria-invalid]="invalid('countryOfBirth')"
-            [attr.aria-describedby]="describedBy('countryOfBirth', id + '-country-help')"
-          />
-          <p class="au-help" [id]="id + '-country-help'">
-            El listado de países no está disponible en este entorno. Escribe el código ISO de tres letras (COL, MEX,
-            USA…).
-          </p>
-        }
-      }
-      @if (errorFor('countryOfBirth'); as message) {
-        <p class="au-field-error" [id]="id + '-countryOfBirth-error'">{{ message }}</p>
-      }
+      </div>
     </div>
 
     <div class="pair">
@@ -217,18 +253,17 @@
         <label class="au-label" [for]="id + '-documentType'">
           Tipo de documento <span class="au-optional">(opcional)</span>
         </label>
-        <input
+        <select
           [id]="id + '-documentType'"
           class="au-input"
           formControlName="documentType"
-          autocomplete="off"
-          spellcheck="false"
-          [attr.list]="id + '-document-types'"
           [attr.aria-describedby]="id + '-documentType-help'"
-        />
-        <datalist [id]="id + '-document-types'">
-          <option value="national_id"></option>
-        </datalist>
+        >
+          <option value="">Sin indicar</option>
+          @for (type of idTypes; track type.value) {
+            <option [value]="type.value">{{ type.label }}</option>
+          }
+        </select>
       </div>
       <div class="au-field">
         <label class="au-label" [for]="id + '-documentNumber'">
@@ -244,9 +279,93 @@
       </div>
     </div>
     <p class="au-help doc-help" [id]="id + '-documentType-help'">
-      Código que usa el proveedor, por ejemplo <span class="au-mono">national_id</span>. Si no se indica, el proveedor
-      asume <span class="au-mono">national_id</span> y pedirá también el reverso del documento.
+      Si no se indica, el proveedor asume documento nacional de identidad y pedirá también el reverso.
     </p>
+    <ng-container
+      [ngTemplateOutlet]="countryField"
+      [ngTemplateOutletContext]="{ field: 'documentCountry', label: 'País que emitió el documento', optional: true }"
+    />
+  </section>
+
+  <section class="group" [attr.aria-labelledby]="id + '-contact'">
+    <h3 [id]="id + '-contact'">Datos que algunos bancos exigen</h3>
+
+    <div class="pair">
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-occupation'">Ocupación <span class="au-optional">(opcional)</span></label>
+        <input
+          [id]="id + '-occupation'"
+          class="au-input"
+          formControlName="occupation"
+          autocomplete="off"
+          [attr.aria-invalid]="invalid('occupation')"
+          [attr.aria-describedby]="describedBy('occupation')"
+        />
+        @if (errorFor('occupation'); as message) {
+          <p class="au-field-error" [id]="id + '-occupation-error'">{{ message }}</p>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-gender'">Género <span class="au-optional">(opcional)</span></label>
+        <select [id]="id + '-gender'" class="au-input" formControlName="gender">
+          <option value="">Sin indicar</option>
+          <option value="female">Femenino</option>
+          <option value="male">Masculino</option>
+          <option value="other">Otro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-phoneNumber'">Teléfono <span class="au-optional">(opcional)</span></label>
+      <input
+        [id]="id + '-phoneNumber'"
+        class="au-input au-num"
+        type="tel"
+        formControlName="phoneNumber"
+        autocomplete="off"
+        placeholder="+573001234567"
+        [attr.aria-invalid]="invalid('phoneNumber')"
+        [attr.aria-describedby]="describedBy('phoneNumber', id + '-phone-help')"
+      />
+      <p class="au-help" [id]="id + '-phone-help'">Con el indicativo del país, sin espacios.</p>
+      @if (errorFor('phoneNumber'); as message) {
+        <p class="au-field-error" [id]="id + '-phoneNumber-error'">{{ message }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="group" [attr.aria-labelledby]="id + '-residence'">
+    <h3 [id]="id + '-residence'">Residencia <span class="au-optional">(opcional)</span></h3>
+    <div class="au-field">
+      <label class="au-label" [for]="id + '-addressStreet'">Dirección</label>
+      <input [id]="id + '-addressStreet'" class="au-input" formControlName="addressStreet" autocomplete="off" />
+    </div>
+    <div class="pair">
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-addressCity'">Ciudad</label>
+        <input [id]="id + '-addressCity'" class="au-input" formControlName="addressCity" autocomplete="off" />
+      </div>
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-addressState'">Departamento o estado</label>
+        <input [id]="id + '-addressState'" class="au-input" formControlName="addressState" autocomplete="off" />
+      </div>
+    </div>
+    <div class="pair">
+      <div class="au-field">
+        <label class="au-label" [for]="id + '-addressPostalCode'">Código postal</label>
+        <input
+          [id]="id + '-addressPostalCode'"
+          class="au-input au-num"
+          formControlName="addressPostalCode"
+          autocomplete="off"
+        />
+      </div>
+      <ng-container
+        [ngTemplateOutlet]="countryField"
+        [ngTemplateOutletContext]="{ field: 'addressCountry', label: 'País', optional: true }"
+      />
+    </div>
   </section>
 
   <section class="group" [attr.aria-labelledby]="id + '-pep'">

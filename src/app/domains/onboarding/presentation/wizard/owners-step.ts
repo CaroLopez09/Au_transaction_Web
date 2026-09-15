@@ -49,7 +49,12 @@ import { StepGaps } from './step-gaps';
       }
       @case ('success') {
         @if (roster(); as data) {
-          <au-beneficial-owners [roster]="data" [canManage]="canManage()" (edit)="editor.set({ owner: $event })" />
+          <au-beneficial-owners
+            [roster]="data"
+            [canManage]="canManage()"
+            (edit)="editor.set({ owner: $event })"
+            (remove)="confirmDelete.set($event)"
+          />
           @if (canManage() && data.members.length) {
             <h3 class="documents-title" id="owner-documents-title">Documentos de identidad</h3>
             <ul class="documents" aria-labelledby="owner-documents-title">
@@ -153,9 +158,23 @@ import { StepGaps } from './step-gaps';
         (cancelled)="confirmSync.set(false)"
       >
         <p>
-          Se envía el grupo completo de beneficiarios. Lo que no esté en la lista deja de figurar en el expediente del
-          proveedor.
+          Se envía el grupo completo de beneficiarios. El proveedor identifica a cada persona por su correo: quien ya
+          esté registrado se actualiza, no se duplica.
         </p>
+      </au-confirm-dialog>
+    }
+
+    @if (confirmDelete(); as owner) {
+      <au-confirm-dialog
+        [open]="true"
+        heading="Quitar beneficiario"
+        confirmLabel="Quitar"
+        busyLabel="Quitando…"
+        [busy]="deleting()"
+        (confirmed)="remove(owner)"
+        (cancelled)="confirmDelete.set(null)"
+      >
+        <p>{{ owner.fullName }} dejará de figurar en la lista. Aún no se había enviado al proveedor.</p>
       </au-confirm-dialog>
     }
   `,
@@ -233,6 +252,8 @@ export class OwnersStep {
   protected readonly uploadError = signal<UserFacingError | null>(null);
   protected readonly actionError = signal<UserFacingError | null>(null);
   protected readonly confirmSync = signal(false);
+  protected readonly confirmDelete = signal<BeneficialOwner | null>(null);
+  protected readonly deleting = signal(false);
   protected readonly announcement = signal('');
 
   protected closeEditor(): void {
@@ -268,6 +289,22 @@ export class OwnersStep {
       return;
     }
     this.uploadError.set(result.error);
+  }
+
+  protected async remove(owner: BeneficialOwner): Promise<void> {
+    if (this.deleting()) {
+      return;
+    }
+    this.deleting.set(true);
+    this.actionError.set(null);
+    const error = await this.onboarding.deleteOwner(owner.id);
+    this.deleting.set(false);
+    this.confirmDelete.set(null);
+    if (error) {
+      this.actionError.set(error);
+    } else {
+      this.announcement.set(`${owner.fullName} quitado de la lista.`);
+    }
   }
 
   protected async sync(): Promise<void> {

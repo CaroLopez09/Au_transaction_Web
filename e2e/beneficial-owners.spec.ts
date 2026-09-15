@@ -13,6 +13,7 @@ const QA_OWNER = { firstName: 'Beneficiario QA', lastName: 'Frontend', fullName:
 interface UboJson {
   id: string;
   fullName: string;
+  firstName: string;
   ownershipPercentage: number;
   signer: boolean;
   countryOfBirth: string;
@@ -102,7 +103,9 @@ test.describe.serial('Beneficiarios finales: alta y edición contra el BFF', () 
     const edit = page.getByRole('button', { name: `Editar a ${QA_OWNER.fullName}` });
     await edit.click();
     await expect(drawer(page).getByRole('heading', { name: 'Editar beneficiario' })).toBeVisible();
-    await expect(drawer(page).getByText('El nombre y el cargo no se pueden cambiar después del alta.')).toBeVisible();
+    // G-21 cerrado: el nombre llega precargado y se puede corregir.
+    await expect(drawer(page).getByLabel('Nombre')).toHaveValue(qa!.firstName);
+    await expect(drawer(page).getByLabel('Nombre')).toBeEditable();
     await expect(drawer(page).getByLabel('Porcentaje de participación')).toHaveValue(String(qa!.ownershipPercentage));
 
     const flipped = qa!.signer ? 'No' : 'Sí';

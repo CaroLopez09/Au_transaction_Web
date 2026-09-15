@@ -8,6 +8,7 @@ const fixtureStatus = (overrides: Partial<OnboardingStatus> = {}): OnboardingSta
   providerUserId: null,
   status: 'CREATED',
   rawStatus: 'CREATED',
+  rejectionReason: null,
   verificationTriggered: false,
   pendingFields: [],
   eligibleProducts: [],

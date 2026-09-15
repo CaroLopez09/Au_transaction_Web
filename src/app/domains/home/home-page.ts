@@ -60,7 +60,7 @@ export class HomePage implements OnInit {
     if (!status) {
       return null;
     }
-    const onboarding = stageCopy(onboardingStage(status), status.companyName, this.session.can('onboarding.manage'));
+    const onboarding = stageCopy(onboardingStage(status), status, this.session.can('onboarding.manage'));
     return {
       status,
       onboarding,

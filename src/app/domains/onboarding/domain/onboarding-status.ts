@@ -18,6 +18,8 @@ export interface OnboardingStatus {
   readonly providerUserId: string | null;
   readonly status: KybStatus;
   readonly rawStatus: string;
+  /** Motivos del rechazo recibidos por webhook; el proveedor no los devuelve en ninguna lectura. */
+  readonly rejectionReason: string | null;
   readonly verificationTriggered: boolean;
   /** Campos que el proveedor sigue pidiendo para el producto objetivo: fuente de verdad del formulario. */
   readonly pendingFields: readonly string[];

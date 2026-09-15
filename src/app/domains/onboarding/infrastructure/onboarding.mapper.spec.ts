@@ -1,5 +1,5 @@
 import { OnboardingViewDto, UboRosterDto } from './onboarding.dto';
-import { nameFieldsForUpdate, toOnboardingStatus, toOwnershipRoster, toSaveUboDto } from './onboarding.mapper';
+import { toOnboardingStatus, toOwnershipRoster, toSaveUboDto } from './onboarding.mapper';
 
 /** Respuesta real de GET /api/onboarding (organización semilla, 14-sep-2026): sin kiraUserId por non_null. */
 const fixtureUnregisteredOnboarding: OnboardingViewDto = {
@@ -75,6 +75,9 @@ describe('toOwnershipRoster', () => {
         {
           id: 'ubo-fixture',
           fullName: 'Persona Fixture',
+          firstName: 'Persona',
+          lastName: 'Fixture',
+          knownToKira: false,
           hasOwnership: true,
           ownershipPercentage: 51.5,
           beneficialOwner: true,
@@ -89,6 +92,9 @@ describe('toOwnershipRoster', () => {
     };
     const [owner] = toOwnershipRoster(fixture).members;
     expect(owner.documentNumber).toBeNull();
+    expect(owner.birthDate).toBeNull();
+    expect(owner.address).toBeNull();
+    expect(owner.knownToProvider).toBe(false);
     expect(owner.liveness.status).toBe('PENDING');
     expect(owner.liveness.expiresAt?.toISOString()).toBe('2026-09-21T10:00:00.000Z');
     expect(toOwnershipRoster(fixture).totalOwnership).toBe(0);
@@ -96,7 +102,11 @@ describe('toOwnershipRoster', () => {
 });
 
 describe('toSaveUboDto', () => {
-  const role = {
+  const base = {
+    id: null,
+    firstName: ' María ',
+    lastName: 'Pérez',
+    roleInCompany: '',
     email: null,
     documentType: '  ',
     documentNumber: null,
@@ -106,12 +116,17 @@ describe('toSaveUboDto', () => {
     isSigner: false,
     politicallyExposed: false,
     countryOfBirth: ' col ',
-  };
+    birthDate: null,
+    nationality: null,
+    occupation: null,
+    gender: null,
+    phoneNumber: null,
+    documentCountry: null,
+    address: null,
+  } as const;
 
-  it('en un alta envía nombre, apellido y cargo, y omite opcionales vacíos', () => {
-    expect(
-      toSaveUboDto({ kind: 'register', firstName: ' María ', lastName: 'Pérez', roleInCompany: '', ...role }),
-    ).toEqual({
+  it('en un alta envía nombre y apellido, y omite opcionales vacíos', () => {
+    expect(toSaveUboDto(base)).toEqual({
       firstName: 'María',
       lastName: 'Pérez',
       hasOwnership: true,
@@ -123,15 +138,27 @@ describe('toSaveUboDto', () => {
     });
   });
 
-  it('en una edición envía el id, no envía cargo y reparte el nombre vigente para la validación del BFF', () => {
-    const dto = toSaveUboDto({ kind: 'update', id: 'ubo-1', fullName: 'María José Pérez', ...role });
+  it('en una edición envía el id y los nombres corregidos', () => {
+    const dto = toSaveUboDto({ ...base, id: 'ubo-1', firstName: 'Ana', roleInCompany: 'Gerente' });
     expect(dto.id).toBe('ubo-1');
-    expect(dto.firstName).toBe('María');
-    expect(dto.lastName).toBe('José Pérez');
-    expect('roleInCompany' in dto).toBe(false);
+    expect(dto.firstName).toBe('Ana');
+    expect(dto.roleInCompany).toBe('Gerente');
   });
 
-  it('un nombre de una sola palabra sigue superando la validación', () => {
-    expect(nameFieldsForUpdate('Madonna')).toEqual({ firstName: 'Madonna', lastName: 'Madonna' });
+  it('envía los datos de identidad que pide el proveedor en ISO-3 y sin campos vacíos de dirección', () => {
+    const dto = toSaveUboDto({
+      ...base,
+      birthDate: '1985-04-12',
+      nationality: 'col',
+      gender: 'female',
+      phoneNumber: '+573001234567',
+      documentCountry: 'col',
+      address: { streetName: 'Calle 1', city: 'Bogotá', state: null, postalCode: ' ', country: 'col' },
+    });
+    expect(dto.birthDate).toBe('1985-04-12');
+    expect(dto.nationality).toBe('COL');
+    expect(dto.gender).toBe('female');
+    expect(dto.documentCountry).toBe('COL');
+    expect(dto.address).toEqual({ streetName: 'Calle 1', city: 'Bogotá', country: 'COL' });
   });
 });

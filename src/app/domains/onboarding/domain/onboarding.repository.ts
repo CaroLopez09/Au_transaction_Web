@@ -13,6 +13,8 @@ export abstract class OnboardingRepository {
   abstract roster(): Observable<OwnershipRoster>;
   /** POST /api/ubos — alta o edición local; no llama al proveedor. */
   abstract saveOwner(command: SaveBeneficialOwner): Observable<BeneficialOwner>;
+  /** DELETE /api/ubos/{id} — quita un beneficiario que el proveedor aún no conoce. */
+  abstract deleteOwner(ownerId: string): Observable<OwnershipRoster>;
 
   /** GET /api/onboarding/draft — borrador guardado en el BFF (nunca en el proveedor). */
   abstract draft(): Observable<SavedDraft>;

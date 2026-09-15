@@ -10,6 +10,8 @@ import { OwnerForm } from './owner-form';
 const fixtureOwner: BeneficialOwner = {
   id: 'ubo-fixture',
   fullName: 'Persona Fixture',
+  firstName: 'Persona',
+  lastName: 'Fixture',
   email: 'persona@fixture.test',
   documentType: 'national_id',
   documentNumber: '1020304050',
@@ -21,6 +23,14 @@ const fixtureOwner: BeneficialOwner = {
   politicallyExposed: false,
   countryOfBirth: 'COL',
   roleInCompany: 'Socia',
+  birthDate: '1985-04-12',
+  nationality: 'COL',
+  occupation: null,
+  gender: null,
+  phoneNumber: null,
+  documentCountry: 'COL',
+  address: null,
+  knownToProvider: false,
   liveness: { status: 'PENDING', link: null, expiresAt: null },
 };
 
@@ -95,7 +105,7 @@ describe('OwnerForm', () => {
     choose('¿Es una persona expuesta', 'No');
     await fixture.componentInstance.submit();
     expect(facade.lastCommand).toEqual({
-      kind: 'register',
+      id: null,
       firstName: 'María',
       lastName: 'Pérez',
       roleInCompany: null,
@@ -108,6 +118,13 @@ describe('OwnerForm', () => {
       isSigner: false,
       politicallyExposed: false,
       countryOfBirth: 'col',
+      birthDate: null,
+      nationality: null,
+      occupation: null,
+      gender: null,
+      phoneNumber: null,
+      documentCountry: null,
+      address: null,
     });
   });
 
@@ -127,13 +144,20 @@ describe('OwnerForm', () => {
     expect(facade.lastCommand?.hasOwnership).toBe(false);
   });
 
-  it('en edición precarga los datos, no ofrece cambiar el nombre y envía una actualización', async () => {
-    const { fixture, facade, element, input } = await render(fixtureOwner);
-    expect(element.querySelector('#fixture-form-firstName')).toBeNull();
-    expect(element.textContent).toContain('El nombre y el cargo no se pueden cambiar después del alta.');
+  it('en edición precarga los datos, permite corregir el nombre y envía una actualización', async () => {
+    const { fixture, facade, input, type } = await render(fixtureOwner);
+    expect(input('firstName').value).toBe('Persona');
+    expect(input('birthDate').value).toBe('1985-04-12');
     expect(input('ownershipPercentage').value).toBe('60');
+    type('firstName', 'Personita');
     await fixture.componentInstance.submit();
-    expect(facade.lastCommand).toMatchObject({ kind: 'update', id: 'ubo-fixture', fullName: 'Persona Fixture' });
+    expect(facade.lastCommand).toMatchObject({
+      id: 'ubo-fixture',
+      firstName: 'Personita',
+      lastName: 'Fixture',
+      birthDate: '1985-04-12',
+      nationality: 'COL',
+    });
   });
 
   it('pinta junto a cada campo los errores de validación del BFF', async () => {

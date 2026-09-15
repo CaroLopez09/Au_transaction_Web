@@ -97,14 +97,26 @@ import { livenessCopy } from './onboarding-copy';
               }
             </div>
             @if (canManage()) {
-              <button
-                type="button"
-                class="au-button au-button--quiet edit"
-                [attr.aria-label]="'Editar a ' + owner.fullName"
-                (click)="edit.emit(owner)"
-              >
-                Editar
-              </button>
+              <div class="edit actions">
+                <button
+                  type="button"
+                  class="au-button au-button--quiet"
+                  [attr.aria-label]="'Editar a ' + owner.fullName"
+                  (click)="edit.emit(owner)"
+                >
+                  Editar
+                </button>
+                @if (!owner.knownToProvider) {
+                  <button
+                    type="button"
+                    class="au-button au-button--quiet"
+                    [attr.aria-label]="'Quitar a ' + owner.fullName"
+                    (click)="remove.emit(owner)"
+                  >
+                    Quitar
+                  </button>
+                }
+              </div>
             }
           </li>
         }
@@ -115,6 +127,12 @@ import { livenessCopy } from './onboarding-copy';
     :host {
       display: grid;
       gap: var(--au-space-4);
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--au-space-2);
+      justify-content: flex-end;
     }
     .summary {
       display: grid;
@@ -210,6 +228,7 @@ export class BeneficialOwners {
   readonly roster = input.required<OwnershipRoster>();
   readonly canManage = input(false);
   readonly edit = output<BeneficialOwner>();
+  readonly remove = output<BeneficialOwner>();
   protected readonly warnings = computed(() => rosterWarnings(this.roster()));
   protected readonly mask = maskDocument;
   protected readonly liveness = livenessCopy;

@@ -42,6 +42,12 @@ export class OnboardingHttpRepository extends OnboardingRepository {
     return this.http.post<UboViewDto>(`${this.baseUrl}/ubos`, toSaveUboDto(command)).pipe(map(toBeneficialOwner));
   }
 
+  deleteOwner(ownerId: string): Observable<OwnershipRoster> {
+    return this.http
+      .delete<UboRosterDto>(`${this.baseUrl}/ubos/${encodeURIComponent(ownerId)}`)
+      .pipe(map(toOwnershipRoster));
+  }
+
   draft(): Observable<SavedDraft> {
     return this.http.get<OnboardingDraftViewDto>(`${this.baseUrl}/onboarding/draft`).pipe(map(toSavedDraft));
   }

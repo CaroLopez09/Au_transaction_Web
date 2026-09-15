@@ -58,7 +58,7 @@ export class OnboardingFacade {
 
   /**
    * Alta o edición local de un beneficiario. Un segundo envío mientras el primero sigue en curso se
-   * descarta: el BFF crea un registro nuevo por cada POST sin `id` y no hay forma de borrarlo (G-17).
+   * descarta: el BFF crea un registro nuevo por cada POST sin `id`.
    */
   async saveOwner(command: SaveBeneficialOwner): Promise<SaveOwnerResult | null> {
     if (this.savingOwnerState()) {
@@ -73,6 +73,16 @@ export class OnboardingFacade {
       return { ok: false, error: mapApiError(toApiError(error)) };
     } finally {
       this.savingOwnerState.set(false);
+    }
+  }
+
+  /** Quita un beneficiario que el proveedor aún no conoce. Devuelve el error para mostrarlo junto a la lista. */
+  async deleteOwner(ownerId: string): Promise<UserFacingError | null> {
+    try {
+      this.rosterState.set(success(await firstValueFrom(this.repository.deleteOwner(ownerId))));
+      return null;
+    } catch (error) {
+      return mapApiError(toApiError(error));
     }
   }
 
