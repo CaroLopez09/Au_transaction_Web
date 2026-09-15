@@ -20,6 +20,7 @@ import { RecipientsFacade } from '../../recipients/application/recipients.facade
 import { PayoutsFacade } from '../application/payouts.facade';
 import {
   approvalBlocker,
+  approvalsGiven,
   MAX_SUPPORTING_DOCUMENT_CHARS,
   MAX_SUPPORTING_DOCUMENTS,
   NATURES_OF_PAYMENT,
@@ -92,6 +93,8 @@ export class PayoutDetailPage implements OnInit {
       account: (dataOf(this.accounts.accounts()) ?? []).find((item) => item.id === payout.virtualAccountId) ?? null,
       canDecide: this.session.can('payouts.approve') && blocker === null,
       ownPayout: blocker === 'own-payout',
+      alreadySigned: blocker === 'already-signed',
+      approvalsGiven: approvalsGiven(payout),
       quoteSeconds,
       /** Payout.approve rechaza con la cotización vencida: se anticipa en la UI. */
       quoteExpired: payout.priceLocked && quoteSeconds === 0,
@@ -103,6 +106,7 @@ export class PayoutDetailPage implements OnInit {
   });
 
   protected readonly actionError = signal<UserFacingError | null>(null);
+  protected readonly notice = signal<string | null>(null);
   protected readonly approving = signal(false);
   protected readonly rejecting = signal(false);
   protected readonly documents = signal<readonly SupportingDocument[]>([]);
@@ -188,6 +192,9 @@ export class PayoutDetailPage implements OnInit {
       return;
     }
     this.approving.set(false);
+    if (result.ok && result.value.approvalState === 'PENDING_APPROVAL') {
+      this.notice.set('Aprobación registrada. El pago supera el límite de la empresa: falta la de otra persona.');
+    }
     if (!result.ok) {
       // El BFF puede haber marcado el pago como fallido: se relee para no mostrar un estado viejo.
       this.actionError.set(result.error);

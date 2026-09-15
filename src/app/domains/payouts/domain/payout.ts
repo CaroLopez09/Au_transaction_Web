@@ -33,6 +33,10 @@ export interface Payout {
   readonly terminal: boolean;
   readonly makerUserId: string;
   readonly approverUserId: string | null;
+  /** Primera firma cuando el pago supera el límite de la empresa y necesita dos. */
+  readonly firstApproverUserId: string | null;
+  /** 1 o 2 aprobaciones, según el límite configurado en el BFF. */
+  readonly requiredApprovals: number;
   readonly priceLocked: boolean;
   readonly providerPayoutId: string | null;
   /** IMAD / ACH trace / UETR: el comprobante que pide el cliente final. */
@@ -136,11 +140,26 @@ export interface ApprovePayout {
 }
 
 /** Payout.approve del BFF: pendiente y aprobado por otra persona distinta de quien lo creó. */
-export function approvalBlocker(payout: Payout, userId: string | null): 'not-pending' | 'own-payout' | null {
+/**
+ * Por qué esta persona no puede decidir (Payout.approve). Quien registró el destinatario tampoco
+ * aprueba, pero ese dato no viaja: lo rechaza el BFF con su mensaje.
+ */
+export function approvalBlocker(
+  payout: Payout,
+  userId: string | null,
+): 'not-pending' | 'own-payout' | 'already-signed' | null {
   if (payout.approvalState !== 'PENDING_APPROVAL') {
     return 'not-pending';
   }
-  return payout.makerUserId === userId ? 'own-payout' : null;
+  if (payout.makerUserId === userId) {
+    return 'own-payout';
+  }
+  return payout.firstApproverUserId !== null && payout.firstApproverUserId === userId ? 'already-signed' : null;
+}
+
+/** Aprobaciones ya dadas de las requeridas, mientras el pago está pendiente. */
+export function approvalsGiven(payout: Payout): number {
+  return payout.firstApproverUserId ? 1 : 0;
 }
 
 export abstract class PayoutRepository {

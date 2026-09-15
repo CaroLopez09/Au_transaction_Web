@@ -98,8 +98,21 @@
 
       @if (current.payout.approvalState === 'PENDING_APPROVAL') {
         <div class="decision">
+          @if (current.payout.requiredApprovals > 1) {
+            <p class="au-notice">
+              Supera el límite de la empresa: necesita dos aprobaciones de personas distintas (<span class="au-num">{{
+                current.approvalsGiven
+              }}</span>
+              de 2).
+            </p>
+          }
+          @if (notice(); as message) {
+            <p class="au-notice success" role="status">{{ message }}</p>
+          }
           @if (current.ownPayout) {
             <p class="au-notice">Lo preparaste tú: otra persona con rol de aprobación debe aprobarlo o rechazarlo.</p>
+          } @else if (current.alreadySigned) {
+            <p class="au-notice">Ya lo aprobaste: falta la aprobación de otra persona.</p>
           } @else if (current.canDecide) {
             @if (current.quoteExpired) {
               <p class="au-notice au-notice--attention">

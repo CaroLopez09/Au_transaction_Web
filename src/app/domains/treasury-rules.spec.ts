@@ -192,6 +192,7 @@ describe('cotizaciones y pagos', () => {
       status: 'NOT_SUBMITTED',
       terminal: false,
       makerUserId: 'org:treasury_maker',
+      requiredApprovals: 1,
       priceLocked: true,
       ...overrides,
     });
@@ -200,6 +201,12 @@ describe('cotizaciones y pagos', () => {
     expect(approvalBlocker(payout(), 'org:treasury_maker')).toBe('own-payout');
     expect(approvalBlocker(payout(), 'org:treasury_approver')).toBeNull();
     expect(approvalBlocker(payout({ approvalState: 'SUBMITTED' }), 'org:treasury_approver')).toBe('not-pending');
+  });
+
+  it('con dos firmas requeridas, quien ya firmó no vuelve a hacerlo', () => {
+    const firmado = payout({ requiredApprovals: 2, firstApproverUserId: 'org:treasury_approver' });
+    expect(approvalBlocker(firmado, 'org:treasury_approver')).toBe('already-signed');
+    expect(approvalBlocker(firmado, 'org:admin')).toBeNull();
   });
 
   it('el cuerpo de aprobación omite lo vacío y envía documentos como data URI', () => {

@@ -45,6 +45,8 @@ export interface PayoutViewDto {
   terminal: boolean;
   makerUserId: string;
   approverUserId?: string;
+  firstApproverUserId?: string;
+  requiredApprovals?: number;
   priceLocked: boolean;
   kiraPayoutId?: string;
   referenceNumber?: string;

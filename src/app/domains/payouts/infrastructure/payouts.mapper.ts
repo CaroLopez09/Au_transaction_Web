@@ -71,6 +71,8 @@ export function toPayout(dto: PayoutViewDto): Payout {
     terminal: dto.terminal,
     makerUserId: dto.makerUserId,
     approverUserId: dto.approverUserId ?? null,
+    firstApproverUserId: dto.firstApproverUserId ?? null,
+    requiredApprovals: dto.requiredApprovals ?? 1,
     priceLocked: dto.priceLocked,
     providerPayoutId: dto.kiraPayoutId ?? null,
     referenceNumber: dto.referenceNumber ?? null,
