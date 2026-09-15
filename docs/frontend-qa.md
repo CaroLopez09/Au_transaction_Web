@@ -242,7 +242,7 @@ límite, recotización de un pago pendiente y código para soporte (`X-Request-I
 ### Resultados automáticos
 
 - Unitarias **155/155**, lint limpio, **E2E 33/33** (1 omitida por diseño).
-- BFF: **400** pruebas; Bruno **103/103** peticiones y **66/66** tests contra el sandbox.
+- BFF: **400** pruebas; Bruno **104/104** peticiones y **67/67** tests contra el sandbox.
 
 ### Pendiente / no verificado
 
