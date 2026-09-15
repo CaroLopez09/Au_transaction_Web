@@ -4,7 +4,8 @@ Frontend Angular de AU Transactional: vinculación, tesorería y cumplimiento pa
 exclusivamente el BFF propio [`AuTransactional`](../AuTransactional); ninguna credencial del proveedor (KiraFin) llega al
 navegador.
 
-**Estado:** las 7 áreas están construidas: Inicio, Vinculación (asistente por pasos con borrador guardado en el BFF), Cuentas, Depósitos,
+**Estado (15-sep):** alineado con el BFF y con la documentación nueva de Kira; añade verificación en dos pasos (TOTP),
+avisos, centro de eventos, auditoría y la consola de operaciones para el rol interno de AU. Las 7 áreas originales están construidas: Inicio, Vinculación (asistente por pasos con borrador guardado en el BFF), Cuentas, Depósitos,
 Destinatarios, Pagos (maker-checker) y Solicitudes de información. El envío del KYB al proveedor (alta, perfil, documentos, beneficiarios,
 liveness) está construido pero sin probar contra Kira. Sin credenciales de Kira, tesorería y RFIs muestran estados vacíos o
 bloqueados reales; sus flujos con datos se verificaron con fixtures de contrato. Alcance y siguientes cortes en [`docs/frontend-architecture.md §18`](docs/frontend-architecture.md#18-roadmap-mvp-según-capacidades-reales).
