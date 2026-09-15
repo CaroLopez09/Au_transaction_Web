@@ -71,6 +71,8 @@ function parseStoredSession(value: unknown): Session | null {
       email: operator['email'],
       tenantId: operator['tenantId'],
       role: parseRole(typeof operator['role'] === 'string' ? operator['role'] : null),
+      mfaEnabled: operator['mfaEnabled'] === true,
+      mfaEnforced: operator['mfaEnforced'] === true,
     },
   };
 }

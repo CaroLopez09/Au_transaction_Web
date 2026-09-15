@@ -4,7 +4,13 @@ import { Capability, roleCan } from '../permissions/capabilities';
 import { CLOCK } from './clock';
 import { isSessionValid, Session, SessionEndReason } from './session';
 import { SESSION_PERSISTENCE } from './session-persistence';
-import { SessionRepository } from './session.repository';
+import { MfaEnrollment, SessionGrant, SessionRepository } from './session.repository';
+
+/** Lo que falta tras la contraseña: nada, el código, o configurar el segundo factor. */
+export type SignInStep =
+  | { readonly kind: 'done' }
+  | { readonly kind: 'mfa-code'; readonly challenge: string }
+  | { readonly kind: 'mfa-setup'; readonly challenge: string };
 
 /** Máximo que admite setTimeout (~24,8 días); el JWT del BFF dura 8 h. */
 const MAX_TIMER_MS = 2_147_483_647;
@@ -48,14 +54,47 @@ export class SessionStore {
     return current?.accessToken ?? null;
   }
 
-  async signIn(email: string, password: string): Promise<void> {
+  async signIn(email: string, password: string): Promise<SignInStep> {
     const startedAt = this.now();
     const result = await firstValueFrom(this.repository.signIn(email, password));
-    const operator = await firstValueFrom(this.repository.currentOperator(result.accessToken));
+    if (result.kind === 'mfa') {
+      return { kind: result.setupRequired ? 'mfa-setup' : 'mfa-code', challenge: result.challenge };
+    }
+    await this.start(result, startedAt);
+    return { kind: 'done' };
+  }
+
+  /** Segundo paso del ingreso con MFA. */
+  async completeMfa(challenge: string, code: string): Promise<void> {
+    const startedAt = this.now();
+    await this.start(await firstValueFrom(this.repository.verifyMfa(challenge, code)), startedAt);
+  }
+
+  /** Genera el secreto: con el reto del login o, sin reto, para la sesión actual. */
+  beginMfaSetup(challenge: string | null): Promise<MfaEnrollment> {
+    return firstValueFrom(this.repository.setupMfa(challenge));
+  }
+
+  /** Confirma el secreto; el BFF emite una sesión nueva que sustituye a la actual. */
+  async confirmMfaSetup(challenge: string | null, code: string): Promise<void> {
+    const startedAt = this.now();
+    await this.start(await firstValueFrom(this.repository.enableMfa(challenge, code)), startedAt);
+  }
+
+  async disableMfa(code: string): Promise<void> {
+    await firstValueFrom(this.repository.disableMfa(code));
+    const current = this.state();
+    if (current) {
+      this.activate({ ...current, operator: { ...current.operator, mfaEnabled: false } });
+    }
+  }
+
+  private async start(grant: SessionGrant, startedAt: number): Promise<void> {
+    const operator = await firstValueFrom(this.repository.currentOperator(grant.accessToken));
     this.activate({
-      accessToken: result.accessToken,
-      expiresAt: startedAt + result.expiresInSeconds * 1000,
-      tenantName: result.tenantName,
+      accessToken: grant.accessToken,
+      expiresAt: startedAt + grant.expiresInSeconds * 1000,
+      tenantName: grant.tenantName,
       operator,
     });
   }

@@ -6,12 +6,19 @@ import { mapApiError, UserFacingError } from '../../http/error-mapping';
 import { AuLogo } from '../../../shared/ui/au-logo';
 import { Icon } from '../../../shared/ui/icon';
 import { safeReturnUrl } from '../auth.guards';
+import { MfaEnrollment } from '../session.repository';
 import { SessionStore } from '../session.store';
+import { MfaEnrollmentPanel } from './mfa-enrollment';
+
+type Stage =
+  | { readonly kind: 'credentials' }
+  | { readonly kind: 'code'; readonly challenge: string }
+  | { readonly kind: 'setup'; readonly challenge: string; readonly enrollment: MfaEnrollment | null };
 
 @Component({
   selector: 'au-sign-in-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, AuLogo, Icon],
+  imports: [ReactiveFormsModule, AuLogo, Icon, MfaEnrollmentPanel],
   templateUrl: './sign-in-page.html',
   styleUrl: './sign-in-page.css',
 })
@@ -26,6 +33,12 @@ export class SignInPage {
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+
+  protected readonly mfaCode = inject(FormBuilder).nonNullable.control('', [
+    Validators.required,
+    Validators.pattern(/^\d{6}$/),
+  ]);
+  protected readonly stage = signal<Stage>({ kind: 'credentials' });
 
   protected readonly submitting = signal(false);
   protected readonly submitted = signal(false);
@@ -63,14 +76,78 @@ export class SignInPage {
     this.error.set(null);
     const { email, password } = this.form.getRawValue();
     try {
-      await this.session.signIn(email.trim(), password);
-      await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('volver')));
+      const step = await this.session.signIn(email.trim(), password);
+      if (step.kind === 'done') {
+        await this.enter();
+      } else if (step.kind === 'mfa-code') {
+        this.stage.set({ kind: 'code', challenge: step.challenge });
+        queueMicrotask(() => document.getElementById('mfa-code')?.focus());
+      } else {
+        this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment: null });
+        const enrollment = await this.session.beginMfaSetup(step.challenge);
+        this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment });
+      }
     } catch (error) {
-      this.error.set(mapApiError(toApiError(error)));
-      this.form.controls.password.reset();
-      queueMicrotask(() => this.errorSummary()?.nativeElement.focus());
+      this.fail(error);
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  protected async submitCode(): Promise<void> {
+    const current = this.stage();
+    this.mfaCode.markAsTouched();
+    if (current.kind !== 'code' || this.mfaCode.invalid || this.submitting()) {
+      return;
+    }
+    this.submitting.set(true);
+    this.error.set(null);
+    try {
+      await this.session.completeMfa(current.challenge, this.mfaCode.value);
+      await this.enter();
+    } catch (error) {
+      this.mfaCode.reset();
+      this.fail(error, false);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  protected async confirmSetup(code: string): Promise<void> {
+    const current = this.stage();
+    if (current.kind !== 'setup' || this.submitting()) {
+      return;
+    }
+    this.submitting.set(true);
+    this.error.set(null);
+    try {
+      await this.session.confirmMfaSetup(current.challenge, code);
+      await this.enter();
+    } catch (error) {
+      this.fail(error, false);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  /** Vuelve a la contraseña: el reto caduca en minutos y no se reutiliza. */
+  protected restart(): void {
+    this.stage.set({ kind: 'credentials' });
+    this.error.set(null);
+    this.mfaCode.reset();
+    this.form.controls.password.reset();
+  }
+
+  private async enter(): Promise<void> {
+    await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('volver')));
+  }
+
+  private fail(error: unknown, resetPassword = true): void {
+    this.error.set(mapApiError(toApiError(error)));
+    if (resetPassword) {
+      this.form.controls.password.reset();
+      this.stage.set({ kind: 'credentials' });
+    }
+    queueMicrotask(() => this.errorSummary()?.nativeElement.focus());
   }
 }

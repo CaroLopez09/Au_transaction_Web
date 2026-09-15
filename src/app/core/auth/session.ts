@@ -6,6 +6,9 @@ export interface Operator {
   readonly tenantId: string;
   /** `null` si el backend envía un rol que este frontend no conoce: sin capacidades. */
   readonly role: Role | null;
+  readonly mfaEnabled: boolean;
+  /** El entorno exige segundo factor: no se puede desactivar. */
+  readonly mfaEnforced: boolean;
 }
 
 export interface Session {
@@ -13,7 +16,6 @@ export interface Session {
   /** Instante absoluto (ms epoch) calculado desde `expiresIn` en el login. */
   readonly expiresAt: number;
   readonly operator: Operator;
-  /** Solo llega en el login (gap G-02); se conserva durante la sesión. */
   readonly tenantName: string | null;
 }
 

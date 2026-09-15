@@ -12,10 +12,23 @@ import { SessionRepository } from './session.repository';
 import { SessionStore } from './session.store';
 
 class FixtureSessionRepository extends SessionRepository {
-  signIn = vi.fn(() => of({ accessToken: 'fixture-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }));
-  currentOperator = vi.fn(() =>
-    of({ userId: 'fixture:admin', email: 'admin@fixture.test', tenantId: 'fixture', role: 'ADMIN' as const }),
+  signIn = vi.fn(() =>
+    of({ kind: 'session' as const, accessToken: 'fixture-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }),
   );
+  currentOperator = vi.fn(() =>
+    of({
+      userId: 'fixture:admin',
+      email: 'admin@fixture.test',
+      tenantId: 'fixture',
+      role: 'ADMIN' as const,
+      mfaEnabled: false,
+      mfaEnforced: false,
+    }),
+  );
+  verifyMfa = vi.fn(() => of({ accessToken: 'mfa-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }));
+  setupMfa = vi.fn(() => of({ secret: 'JBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/x' }));
+  enableMfa = vi.fn(() => of({ accessToken: 'enabled-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }));
+  disableMfa = vi.fn(() => of(undefined));
 }
 
 function memoryPersistence(initial: Session | null = null): SessionPersistence & { value: Session | null } {
@@ -37,7 +50,14 @@ const fixtureSession = (expiresAt: number): Session => ({
   accessToken: 'stored-token',
   expiresAt,
   tenantName: 'Fixture',
-  operator: { userId: 'fixture:read_only', email: 'read.only@fixture.test', tenantId: 'fixture', role: 'READ_ONLY' },
+  operator: {
+    userId: 'fixture:read_only',
+    email: 'read.only@fixture.test',
+    tenantId: 'fixture',
+    role: 'READ_ONLY',
+    mfaEnabled: false,
+    mfaEnforced: false,
+  },
 });
 
 function setup(options: { now?: number; stored?: Session | null } = {}) {
@@ -70,6 +90,35 @@ describe('SessionStore', () => {
     expect(store.session()?.expiresAt).toBe(5_000 + 28_800_000);
     expect(store.can('payouts.approve')).toBe(true);
     expect(persistence.value?.accessToken).toBe('fixture-token');
+  });
+
+  it('con segundo factor la contraseña no abre sesión hasta verificar el código', async () => {
+    const { store, repository } = setup({ now: 5_000 });
+    repository.signIn.mockReturnValueOnce(
+      of({ kind: 'mfa', challenge: 'reto', setupRequired: false, expiresInSeconds: 300 }) as never,
+    );
+
+    const step = await store.signIn('admin@fixture.test', 'secret');
+    expect(step).toEqual({ kind: 'mfa-code', challenge: 'reto' });
+    expect(store.isAuthenticated()).toBe(false);
+
+    await store.completeMfa('reto', '123456');
+    expect(repository.verifyMfa).toHaveBeenCalledWith('reto', '123456');
+    expect(store.session()?.accessToken).toBe('mfa-token');
+  });
+
+  it('si el entorno exige MFA y la cuenta no lo tiene, pide configurarlo y entra al confirmarlo', async () => {
+    const { store, repository } = setup();
+    repository.signIn.mockReturnValueOnce(
+      of({ kind: 'mfa', challenge: 'reto', setupRequired: true, expiresInSeconds: 300 }) as never,
+    );
+
+    expect(await store.signIn('admin@fixture.test', 'secret')).toEqual({ kind: 'mfa-setup', challenge: 'reto' });
+    await store.beginMfaSetup('reto');
+    await store.confirmMfaSetup('reto', '654321');
+
+    expect(repository.enableMfa).toHaveBeenCalledWith('reto', '654321');
+    expect(store.session()?.accessToken).toBe('enabled-token');
   });
 
   it('restaura una sesión guardada vigente y descarta una vencida', () => {

@@ -1,14 +1,25 @@
 import { parseRole } from '../../permissions/role';
 import { Operator } from '../session';
-import { SignInResult } from '../session.repository';
+import { SessionGrant, SignInResult } from '../session.repository';
 import { LoginResultDto, MeDto } from './session.dto';
 
 export function toSignInResult(dto: LoginResultDto): SignInResult {
-  return {
-    accessToken: dto.accessToken,
-    expiresInSeconds: dto.expiresIn,
-    tenantName: dto.tenantName ?? null,
-  };
+  if (dto.mfaChallenge) {
+    return {
+      kind: 'mfa',
+      challenge: dto.mfaChallenge,
+      setupRequired: dto.mfaSetupRequired === true,
+      expiresInSeconds: dto.expiresIn,
+    };
+  }
+  return { kind: 'session', ...toSessionGrant(dto) };
+}
+
+export function toSessionGrant(dto: LoginResultDto): SessionGrant {
+  if (!dto.accessToken) {
+    throw new Error('El BFF no devolvió sesión.');
+  }
+  return { accessToken: dto.accessToken, expiresInSeconds: dto.expiresIn, tenantName: dto.tenantName ?? null };
 }
 
 export function toOperator(dto: MeDto): Operator {
@@ -17,5 +28,7 @@ export function toOperator(dto: MeDto): Operator {
     email: dto.email,
     tenantId: dto.tenantId,
     role: parseRole(dto.role),
+    mfaEnabled: dto.mfaEnabled === true,
+    mfaEnforced: dto.mfaEnforced === true,
   };
 }
