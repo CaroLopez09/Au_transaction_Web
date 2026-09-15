@@ -1,6 +1,7 @@
 # AU Transactional Web — Diagnóstico y arquitectura
 
-> Estado (14-sep-2026): diagnóstico aprobado. Implementadas las 7 áreas de navegación. Verificado contra el BFF real: sesión, Inicio, Vinculación y beneficiarios, y estados vacíos/bloqueados de tesorería y RFIs. Los flujos con datos de tesorería y RFIs se verificaron con fixtures de contrato, a falta de credenciales del proveedor. Pendiente: escritura KYB (2b). Verificación en [`frontend-qa.md`](frontend-qa.md).
+> Estado (15-sep-2026): alineado con la documentación nueva de Kira y con la arquitectura de referencia: MFA, avisos, eventos, auditoría, consola de operaciones, términos y consentimiento biométrico, doble firma y recotización. Unitarias 155/155, E2E 33/33 (1 omitida por diseño).
+> Estado anterior (14-sep-2026): diagnóstico aprobado. Implementadas las 7 áreas de navegación. Verificado contra el BFF real: sesión, Inicio, Vinculación y beneficiarios, y estados vacíos/bloqueados de tesorería y RFIs. Los flujos con datos de tesorería y RFIs se verificaron con fixtures de contrato, a falta de credenciales del proveedor. Pendiente: escritura KYB (2b). Verificación en [`frontend-qa.md`](frontend-qa.md).
 > Contrato detallado, RBAC, errores y gaps: [`frontend-backend-contract.md`](frontend-backend-contract.md).
 > Sistema visual: [`../DESIGN.md`](../DESIGN.md).
 
@@ -65,15 +66,16 @@ Hexagonal por capas en el backend: `domain` (agregados, enums de estado tolerant
 
 - `POST /api/auth/login` → `accessToken` + `expiresIn` (s) + `role`, `tenantId`, `tenantName`, `email`.
 - `Authorization: Bearer` en cada petición. Sin cabecera → `403` vacío; token malo → `401 unauthorized`.
-- Sin refresh, sin logout de servidor, sin MFA operativo (`OperatorUser.mfaSecret` existe en el modelo pero ningún flujo lo usa).
+- Sin refresh ni logout de servidor (G-04, G-05).
+- **Verificación en dos pasos (TOTP, 15-sep):** si la cuenta la tiene, el login devuelve un reto (`mfaChallenge`) y la pantalla de ingreso pide el código; si es obligatoria y no está configurada (`mfaSetupRequired`), la alta con QR se hace ahí mismo. La página «Seguridad» la activa y desactiva. El QR se genera en memoria (`qrcode`) y la URI `otpauth://` nunca se guarda.
 
 **Decisión front:** token en memoria (signal) con copia en `sessionStorage` para sobrevivir a recargas de la pestaña; se borra al cerrar la pestaña, al expirar (`expiresIn` calculado a instante absoluto) o ante cualquier `401`. No se usa `localStorage`. Riesgo aceptado y documentado: un XSS podría leer el token igual que desde memoria; la mitigación real es CSP estricta en el despliegue y el gap G-04/G-05 (cookie `HttpOnly`). Ningún secreto de Kira existe en el front.
 
 ## 7. Roles y permisos
 
-Cinco roles de empresa, todos `TENANT`. Matriz de acciones en [`contract §2`](frontend-backend-contract.md#2-matriz-rbac-derivada-acciones-de-ui). Implementado: `core/permissions/capabilities.ts` (capacidades nombradas, espejo de cada `@PreAuthorize`, probado rol × capacidad), `SessionStore.can(capability)` para plantillas y `capabilityGuard(capability)` (`canMatch`) para rutas de escritura. Una directiva estructural se añadirá cuando haya suficientes acciones condicionadas que la justifiquen. El `403` del BFF sigue siendo la autoridad.
+Cinco roles de empresa (`TENANT`) y `PLATFORM_OPERATOR` (`SYSTEM`, sin empresa: solo ve «Operaciones» y «Seguridad»; `audienceGuard` separa ambas audiencias). Matriz de acciones en [`contract §2`](frontend-backend-contract.md#2-matriz-rbac-derivada-acciones-de-ui). Implementado: `core/permissions/capabilities.ts` (capacidades nombradas, espejo de cada `@PreAuthorize`, probado rol × capacidad), `SessionStore.can(capability)` para plantillas y `capabilityGuard(capability)` (`canMatch`) para rutas de escritura. Una directiva estructural se añadirá cuando haya suficientes acciones condicionadas que la justifiquen. El `403` del BFF sigue siendo la autoridad.
 
-Segregación de funciones visible: en la bandeja de aprobación, un pago cuyo `makerUserId === me.userId` muestra "Lo creaste tú — otra persona debe aprobarlo" y no ofrece el botón (la entidad lo rechazaría).
+Segregación de funciones visible: un pago cuyo `makerUserId === me.userId` muestra "Lo preparaste tú" y no ofrece aprobar; con dos firmas requeridas (`requiredApprovals`), quien ya firmó ve "falta la aprobación de otra persona". Que quien registró el destinatario no apruebe lo decide el BFF (el autor no viaja al front). Una cotización vencida ofrece «Recotizar» en lugar de aprobar. Las consultas al proveedor (refrescos, saldo) usan la capacidad `provider.refresh`, que excluye `READ_ONLY`.
 
 ## 8. Estados y reglas → estado UX normalizado
 
@@ -115,15 +117,15 @@ Todo mapeo vive en un único `status-presentation` por dominio con rama por defe
 
 ## 10. Funcionalidades disponibles (respaldadas por el backend)
 
-Sesión y rol · estado KYB y elegibilidad · alta KYB y perfil dinámico por `pendingFields` · UBOs (alta/edición local, sync, liveness) · cuentas virtuales (listar, detalle, abrir, refrescar, saldo, simular en sandbox) · depósitos (global, por cuenta, sync) · destinatarios (directorio, alta por riel, archivo con reemplazo, conciliación con Kira) · cotización con TTL · vista previa de comisiones · pagos maker-checker (crear, aprobar con naturaleza/memo/documentos, rechazar, eventos, refresco, historial Kira paginado) · RFIs (bandeja, detalle, respuesta tipada todo-o-nada, documentos, enlace temporal) · catálogo de países.
+Sesión y rol con MFA TOTP · consola de operaciones (clientes, ficha 360, bandeja de revisión) · avisos, centro de eventos y auditoría · términos y consentimiento biométrico · estado KYB y elegibilidad · alta KYB y perfil dinámico por `pendingFields` · UBOs (alta/edición local, sync, liveness) · cuentas virtuales (listar, detalle, abrir, refrescar, saldo, simular en sandbox) · depósitos (global, por cuenta, sync) · destinatarios (directorio, alta por riel, archivo con reemplazo, conciliación con Kira) · cotización con TTL · vista previa de comisiones · pagos maker-checker (crear, aprobar con naturaleza/memo/documentos, rechazar, eventos, refresco, historial Kira paginado) · RFIs (bandeja, detalle, respuesta tipada todo-o-nada, documentos, enlace temporal) · catálogo de países.
 
 ## 11. Funcionalidades NO disponibles
 
-Consola multiempresa y ficha 360 de clientes · notificaciones · centro de eventos · auditoría (lectura) · administración de operadores/roles/parámetros · MFA · logout de servidor/refresh · industria y países de operación en el alta KYB (G-27, G-28) · borrado de UBO · edición de destinatario (por diseño de Kira) · instrucciones de pago cripto · exportaciones y reportes · razones de rechazo KYB.
+Administración de operadores/roles/parámetros (G-13) · logout de servidor/refresh (G-04, G-05) · países de operación en el alta KYB (G-28) · edición de destinatario (por diseño de Kira) · instrucciones de pago cripto (fuera de alcance: el piloto no usa cripto) · exportaciones y reportes · remediación KYB desde la consola (es de solo lectura).
 
 ## 12. Gaps backend/frontend
 
-30 gaps con impacto, cambio recomendado y prioridad en [`contract §4`](frontend-backend-contract.md#4-gaps-backend--frontend). Los de prioridad alta: **G-01** consola multiempresa, **G-07** idempotencia de `POST /api/payouts` y `/api/recipients` desde el cliente, **G-16** esquema de `pendingFields`.
+30 gaps con impacto, cambio recomendado y prioridad en [`contract §4`](frontend-backend-contract.md#4-gaps-backend--frontend). Cerrados, entre otros, G-01 (consola), G-07 (idempotencia), G-09 (permisos de refresco), G-15, G-17, G-21, G-24 y G-27. Siguen abiertos G-04/G-05 (sesión), G-13 (operadores), G-14 (paginación), G-16 (etiquetas de `pendingFields`), G-26 (destinatarios archivados en pagos antiguos) y G-28.
 
 ## 13. Riesgos
 

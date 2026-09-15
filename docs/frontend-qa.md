@@ -224,3 +224,30 @@ antes de escribirlo). BFF completo `./mvnw test` → 314 pruebas, 0 fallos.
 - Formato exacto que Kira acepta en `date_of_birth`/`formation_date` (se envía `AAAA-MM-DD`) y nombres de campo del
   representante legal en el perfil: tomados de la documentación, no probados.
 - Industria y países de operación no se piden (G-27, G-28).
+
+## Ronda 5 — Alineación con Kira y controles de la arquitectura (15-sep-2026)
+
+Alcance: estados nuevos de Kira (KYT, `CANCELLED`, `FROZEN`, RFIs retirados), idempotencia desde el
+cliente, MFA TOTP, avisos/eventos/auditoría, consola de operaciones, permisos de consulta al
+proveedor (G-09), términos y consentimiento biométrico, EIN solo para EE. UU., doble firma por
+límite, recotización de un pago pendiente y código para soporte (`X-Request-Id`) en los errores.
+
+### Contrato comprobado con peticiones reales
+
+- Sandbox de Kira con `juriscop`: vinculación, beneficiarios, RFIs, términos
+  (`POST /api/onboarding/terms` → Kira `200`) y la versión única `2026-06-01`.
+- Consentimiento: `POST /api/ubos/liveness-links` sin `biometricConsent` → `422`.
+- Métricas: `/actuator/metrics` `200` para la plataforma y `403` para una empresa.
+
+### Resultados automáticos
+
+- Unitarias **155/155**, lint limpio, **E2E 33/33** (1 omitida por diseño).
+- BFF: **400** pruebas; Bruno **103/103** peticiones y **66/66** tests contra el sandbox.
+
+### Pendiente / no verificado
+
+- Doble firma, recotización y consentimiento en el cajón de documentos: cubiertos por pruebas
+  unitarias y del BFF, **sin recorrido E2E** (no hay pagos reales: ningún user del sandbox está
+  `VERIFIED`).
+- Casilla de términos: sin versión configurada en local no se muestra; se probó con
+  `BFF_TERMS_VERSION` definida contra el BFF.
