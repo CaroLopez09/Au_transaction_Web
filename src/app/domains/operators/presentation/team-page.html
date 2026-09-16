@@ -1,0 +1,190 @@
+<au-page-header
+  title="Equipo"
+  description="Personas de la organización que pueden entrar al portal, con el rol que decide lo que cada una puede hacer."
+>
+  @if (canManage()) {
+    <button type="button" class="au-button au-button--primary" (click)="startCreating()">Añadir persona</button>
+  }
+</au-page-header>
+
+<div aria-live="polite">
+  @if (notice(); as message) {
+    <p class="au-notice success" role="status">{{ message }}</p>
+  }
+  @if (actionError(); as failure) {
+    <p class="au-notice au-notice--attention" role="alert">{{ failure.description }}</p>
+  }
+</div>
+
+@switch (rows().status) {
+  @case ('loading') {
+    <au-skeleton height="200px" />
+  }
+  @case ('error') {
+    @if (rows(); as state) {
+      @if (state.status === 'error') {
+        <au-error-state [error]="state.error" (retry)="load()" />
+      }
+    }
+  }
+  @case ('success') {
+    @if (rows(); as state) {
+      @if (state.status === 'success') {
+        <div class="au-table-wrap">
+          <table class="au-table">
+            <caption class="au-visually-hidden">
+              Operadores de la organización
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Persona</th>
+                <th scope="col">Rol</th>
+                <th scope="col">Segundo factor</th>
+                <th scope="col">Estado</th>
+                @if (canManage()) {
+                  <th scope="col"><span class="au-visually-hidden">Acciones</span></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (operator of state.data; track operator.id) {
+                <tr>
+                  <td>
+                    <span class="au-cell-strong">{{ operator.fullName }}</span>
+                    <span class="sub">{{ operator.email }}{{ isMe(operator) ? ' · tú' : '' }}</span>
+                  </td>
+                  <td>{{ label(operator.role, operator.roleDescription) }}</td>
+                  <td>{{ operator.mfaEnabled ? 'Activo' : 'Sin configurar' }}</td>
+                  <td>
+                    <au-status-badge
+                      [label]="operator.active ? 'Activa' : 'Desactivada'"
+                      [tone]="operator.active ? 'success' : 'neutral'"
+                      [technicalValue]="operator.status"
+                    />
+                  </td>
+                  @if (canManage()) {
+                    <td class="actions">
+                      @if (operator.active && !isMe(operator)) {
+                        <button type="button" class="au-button au-button--secondary" (click)="toSuspend.set(operator)">
+                          Desactivar
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (!canManage()) {
+          <p class="au-help">Dar de alta o desactivar personas lo hace un rol de Administración.</p>
+        }
+      }
+    }
+  }
+}
+
+@if (drawerOpen()) {
+  <au-drawer [open]="true" heading="Añadir persona al equipo" [busy]="creating()" (closeRequested)="closeDrawer()">
+    <form id="new-operator-form" [formGroup]="form" (ngSubmit)="submit()">
+      <div aria-live="assertive">
+        @if (createError(); as failure) {
+          <div class="au-notice au-notice--attention" role="alert">
+            <div>
+              <p class="notice-title">{{ failure.title }}</p>
+              <p>{{ failure.description }}</p>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="operator-first-name">Nombre</label>
+        <input id="operator-first-name" class="au-input" formControlName="firstName" maxlength="100" autocomplete="off" />
+        @if (invalid('firstName')) {
+          <p class="au-field-error" role="alert">Escribe el nombre.</p>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="operator-last-name">Apellido</label>
+        <input id="operator-last-name" class="au-input" formControlName="lastName" maxlength="100" autocomplete="off" />
+        @if (invalid('lastName')) {
+          <p class="au-field-error" role="alert">Escribe el apellido.</p>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="operator-email">Correo</label>
+        <input
+          id="operator-email"
+          class="au-input"
+          type="email"
+          formControlName="email"
+          maxlength="255"
+          autocomplete="off"
+        />
+        <p class="au-help">Con este correo ingresa al portal. No puede repetirse en la plataforma.</p>
+        @if (invalid('email')) {
+          <p class="au-field-error" role="alert">Escribe un correo válido.</p>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="operator-password">Contraseña inicial</label>
+        <input
+          id="operator-password"
+          class="au-input"
+          type="password"
+          formControlName="password"
+          maxlength="100"
+          autocomplete="new-password"
+        />
+        <p class="au-help">
+          Mínimo {{ minPassword }} caracteres. Se la entregas tú a la persona: el portal no vuelve a mostrarla.
+        </p>
+        @if (invalid('password')) {
+          <p class="au-field-error" role="alert">Usa al menos {{ minPassword }} caracteres.</p>
+        }
+      </div>
+      <div class="au-field">
+        <label class="au-label" for="operator-role">Rol</label>
+        <select id="operator-role" class="au-input" formControlName="role">
+          @for (role of roles; track role) {
+            <option [value]="role">{{ label(role, null) }}</option>
+          }
+        </select>
+        <p class="au-help">
+          Administración no se asigna desde el portal: crear administradores es alta controlada por AU.
+        </p>
+      </div>
+    </form>
+    <div drawerFooter class="drawer-actions">
+      <button type="button" class="au-button au-button--secondary" [disabled]="creating()" (click)="closeDrawer()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        form="new-operator-form"
+        class="au-button au-button--primary"
+        [disabled]="creating()"
+        [attr.aria-busy]="creating()"
+      >
+        {{ creating() ? 'Creando…' : 'Crear' }}
+      </button>
+    </div>
+  </au-drawer>
+}
+
+@if (toSuspend(); as target) {
+  <au-confirm-dialog
+    [open]="true"
+    [heading]="'Desactivar a ' + target.fullName"
+    confirmLabel="Desactivar"
+    busyLabel="Desactivando…"
+    [busy]="suspending()"
+    (confirmed)="confirmSuspension()"
+    (cancelled)="toSuspend.set(null)"
+  >
+    <p>
+      No podrá volver a ingresar. La cuenta se suspende, no se borra: los pagos y las aprobaciones que ya firmó
+      conservan su nombre.
+    </p>
+  </au-confirm-dialog>
+}

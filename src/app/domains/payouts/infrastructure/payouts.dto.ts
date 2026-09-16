@@ -33,6 +33,8 @@ export interface PayoutViewDto {
   id: string;
   virtualAccountId: string;
   recipientId: string;
+  /** Nombre del destinatario, también si está archivado (el directorio solo trae los activos). */
+  recipientName?: string;
   quotationId?: string;
   amount?: number;
   currency?: string;
@@ -44,8 +46,11 @@ export interface PayoutViewDto {
   status: string;
   terminal: boolean;
   makerUserId: string;
+  makerName?: string;
   approverUserId?: string;
+  approverName?: string;
   firstApproverUserId?: string;
+  firstApproverName?: string;
   requiredApprovals?: number;
   priceLocked: boolean;
   kiraPayoutId?: string;

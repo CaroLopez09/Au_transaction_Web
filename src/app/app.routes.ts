@@ -22,6 +22,8 @@ import { ActivityHttpRepository } from './domains/activity/infrastructure/activi
 import { UnreadNotifications } from './domains/activity/presentation/unread-notifications';
 import { PlatformRepository } from './domains/platform/domain/platform';
 import { PlatformHttpRepository } from './domains/platform/infrastructure/platform-http.repository';
+import { OperatorRepository } from './domains/operators/domain/operator';
+import { OperatorHttpRepository } from './domains/operators/infrastructure/operator-http.repository';
 
 const TITLE_SUFFIX = ' · AU Transactional';
 
@@ -49,6 +51,7 @@ export const routes: Routes = [
       { provide: RfiRepository, useClass: RfiHttpRepository },
       { provide: ActivityRepository, useClass: ActivityHttpRepository },
       { provide: PlatformRepository, useClass: PlatformHttpRepository },
+      { provide: OperatorRepository, useClass: OperatorHttpRepository },
       UnreadNotifications,
     ],
     children: [
@@ -131,6 +134,12 @@ export const routes: Routes = [
         title: 'Auditoría' + TITLE_SUFFIX,
         canMatch: [capabilityGuard('activity.audit')],
         loadComponent: () => import('./domains/activity/presentation/audit-page').then((m) => m.AuditPage),
+      },
+      {
+        path: 'equipo',
+        title: 'Equipo' + TITLE_SUFFIX,
+        canMatch: [capabilityGuard('operators.view')],
+        loadComponent: () => import('./domains/operators/presentation/team-page').then((m) => m.TeamPage),
       },
       {
         path: 'operaciones',

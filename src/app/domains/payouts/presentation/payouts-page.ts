@@ -35,7 +35,7 @@ export class PayoutsPage implements OnInit {
   protected readonly registered = computed(() => dataOf(this.onboarding.status())?.providerUserId != null);
   protected readonly error = computed(() => errorOf(this.facade.list()));
   protected readonly all = computed(() => dataOf(this.facade.list()) ?? []);
-  /** Nombre del destinatario desde el directorio; los archivados no vienen en él (G-03 similar). */
+  /** Respaldo para un pago servido antes de que el BFF resolviera el nombre. */
   private readonly recipientNames = computed(
     () => new Map((dataOf(this.recipients.recipients()) ?? []).map((recipient) => [recipient.id, recipient.name])),
   );
@@ -55,14 +55,22 @@ export class PayoutsPage implements OnInit {
   }
 
   protected recipientName(payout: Payout): string {
-    return this.recipientNames().get(payout.recipientId) ?? 'Destinatario archivado o no disponible';
+    return payout.recipientName ?? this.recipientNames().get(payout.recipientId) ?? 'Destinatario no disponible';
+  }
+
+  /** Quien lo preparó: el nombre del BFF y, si esa cuenta ya no existe, el hecho de que no es tuyo. */
+  protected makerName(payout: Payout): string {
+    if (this.isMine(payout)) {
+      return 'ti';
+    }
+    return payout.makerName ?? 'otra persona';
   }
 
   protected badge(payout: Payout) {
     return payoutBadge(payout);
   }
 
-  /** Sin nombres de operadores en el BFF (G-03): se distingue si lo creó la sesión actual. */
+  /** Un pago propio no se puede aprobar: la etiqueta lo dice antes que el botón. */
   protected isMine(payout: Payout): boolean {
     return payout.makerUserId === this.session.operator()?.userId;
   }

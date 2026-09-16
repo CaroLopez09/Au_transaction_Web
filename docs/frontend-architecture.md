@@ -112,20 +112,20 @@ Todo mapeo vive en un único `status-presentation` por dominio con rama por defe
 |---|---|---|
 | `apiBaseUrl` | `src/environments/environment*.ts` | `/api` (relativo; nunca `localhost`) |
 | Proxy dev | `proxy.conf.json` | `/api` → `http://localhost:8080` (única URL local, fuera del bundle) |
-| `sandboxTools` | environment | `true` en development, `false` en production (G-18) |
+| Capacidades del entorno | `GET /api/capabilities` (BFF) | `sandbox`, `providerConfigured`, `bank`, `providerApiVersion`, `dualApprovalThreshold`. Ya **no** hay bandera de compilación (G-18, cerrado el 16-sep) |
 | Backend | variables del BFF (`DB_PASSWORD`, `KIRA_*`, `BFF_JWT_SECRET`) | fuera del front; se documentan en README |
 
 ## 10. Funcionalidades disponibles (respaldadas por el backend)
 
-Sesión y rol con MFA TOTP · consola de operaciones (clientes, ficha 360, bandeja de revisión) · avisos, centro de eventos y auditoría · términos y consentimiento biométrico · estado KYB y elegibilidad · alta KYB y perfil dinámico por `pendingFields` · UBOs (alta/edición local, sync, liveness) · cuentas virtuales (listar, detalle, abrir, refrescar, saldo, simular en sandbox) · depósitos (global, por cuenta, sync) · destinatarios (directorio, alta por riel, archivo con reemplazo, conciliación con Kira) · cotización con TTL · vista previa de comisiones · pagos maker-checker (crear, aprobar con naturaleza/memo/documentos, rechazar, eventos, refresco, historial Kira paginado) · RFIs (bandeja, detalle, respuesta tipada todo-o-nada, documentos, enlace temporal) · catálogo de países.
+Sesión y rol con MFA TOTP · equipo de la empresa (alta y suspensión de operadores, `/equipo`) · consola de operaciones (clientes, ficha 360, bandeja de revisión) · avisos, centro de eventos y auditoría · términos y consentimiento biométrico · estado KYB y elegibilidad · alta KYB y perfil dinámico por `pendingFields` · UBOs (alta/edición local, sync, liveness) · cuentas virtuales (listar, detalle, abrir, refrescar, saldo, simular en sandbox) · depósitos (global, por cuenta, sync) · destinatarios (directorio, alta por riel, archivo con reemplazo, conciliación con Kira) · cotización con TTL · vista previa de comisiones · pagos maker-checker (crear, aprobar con naturaleza/memo/documentos, rechazar, eventos, refresco, historial Kira paginado) · RFIs (bandeja, detalle, respuesta tipada todo-o-nada, documentos, enlace temporal) · catálogo de países.
 
 ## 11. Funcionalidades NO disponibles
 
-Administración de operadores/roles/parámetros (G-13) · logout de servidor/refresh (G-04, G-05) · países de operación en el alta KYB (G-28) · edición de destinatario (por diseño de Kira) · instrucciones de pago cripto (fuera de alcance: el piloto no usa cripto) · exportaciones y reportes · remediación KYB desde la consola (es de solo lectura).
+Parámetros de la organización · logout de servidor/refresh (G-04, G-05) · países de operación en el alta KYB (G-28) · edición de destinatario (por diseño de Kira) · instrucciones de pago cripto (fuera de alcance: el piloto no usa cripto) · exportaciones y reportes · remediación KYB desde la consola (es de solo lectura).
 
 ## 12. Gaps backend/frontend
 
-30 gaps con impacto, cambio recomendado y prioridad en [`contract §4`](frontend-backend-contract.md#4-gaps-backend--frontend). Cerrados, entre otros, G-01 (consola), G-07 (idempotencia), G-09 (permisos de refresco), G-15, G-17, G-21, G-24 y G-27. Siguen abiertos G-04/G-05 (sesión), G-13 (operadores), G-14 (paginación), G-16 (etiquetas de `pendingFields`), G-26 (destinatarios archivados en pagos antiguos) y G-28.
+30 gaps con impacto, cambio recomendado y prioridad en [`contract §4`](frontend-backend-contract.md#4-gaps-backend--frontend). Cerrados, entre otros, G-01 (consola), G-07 (idempotencia), G-09 (permisos de refresco), G-15, G-17, G-21, G-24 y G-27. Cerrados el 16-sep: G-03 (nombres de maker y aprobadores), G-13 (operadores), G-18 (capacidades del entorno) y G-26 (destinatario de un pago antiguo); G-16 queda parcial (etiquetas sí, esquema de control no). Siguen abiertos G-04/G-05 (sesión), G-14 (paginación) y G-28.
 
 ## 13. Riesgos
 
@@ -164,6 +164,7 @@ src/app/
     quotations/      (se integra en la página de nuevo pago; dominio propio por reglas de TTL/riel)
     payouts/
     rfis/
+    operators/       equipo de la empresa (G-13)
     home/            composición de lectura para Inicio (sin dominio propio)
 ```
 
@@ -192,8 +193,9 @@ presentation (pages, components)  →  application (facade/use case con signals)
 | Destinatarios | `/destinatarios` | Todos (alta A, M) | Directorio, alta por riel, archivo | §1.6 |
 | Pagos | `/pagos`, `/pagos/nuevo`, `/pagos/:id`, `/pagos/historial` | Todos (crear A, M; aprobar A, P) | Bandeja maker-checker, nuevo pago (preview→cotización→confirmar), detalle con timeline, historial Kira | §1.7, §1.8 |
 | Solicitudes (RFI) | `/solicitudes`, `/solicitudes/:id` | Todos (responder A, C) | Bandeja y respuesta | §1.9 |
+| Equipo | `/equipo` | A, C (alta y baja solo A) | Operadores de la empresa, rol, segundo factor y estado | §1.11 |
 
-**No se muestran** (sin backend): Clientes, Notificaciones, Auditoría, Administración. No se crean entradas "próximamente".
+**No se muestran** (sin backend): parámetros de la organización y exportaciones. No se crean entradas "próximamente".
 
 Layout: barra lateral oscura (`#101116`) en ≥1024 px con el logotipo oficial, organización y rol; en móvil, barra superior + navegación en hoja inferior. Una sola organización por sesión (no hay "cambiar organización": el backend no lo soporta).
 

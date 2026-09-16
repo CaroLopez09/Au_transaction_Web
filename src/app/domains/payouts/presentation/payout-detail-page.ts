@@ -89,6 +89,7 @@ export class PayoutDetailPage implements OnInit {
       submitted: payout.approvalState === 'SUBMITTED',
       canRefresh: payout.approvalState === 'SUBMITTED' && this.session.can('provider.refresh'),
       isMine: payout.makerUserId === this.session.operator()?.userId,
+      /** Nombre del BFF; el directorio solo sirve de respaldo y no trae los archivados (G-26). */
       recipient: (dataOf(this.recipients.recipients()) ?? []).find((item) => item.id === payout.recipientId) ?? null,
       account: (dataOf(this.accounts.accounts()) ?? []).find((item) => item.id === payout.virtualAccountId) ?? null,
       canDecide: this.session.can('payouts.approve') && blocker === null,
@@ -100,6 +101,37 @@ export class PayoutDetailPage implements OnInit {
       quoteExpired: payout.priceLocked && quoteSeconds === 0,
     };
   });
+  /** El BFF resuelve el nombre aunque el destinatario esté archivado (G-26); el directorio es respaldo. */
+  protected readonly recipientName = computed(() => {
+    const view = this.view();
+    return view?.payout.recipientName ?? view?.recipient?.name ?? 'No disponible en el directorio';
+  });
+
+  /** Quién preparó el pago (G-03). Sin nombre no se puede auditar quién firmó qué. */
+  protected readonly makerName = computed(() => {
+    const view = this.view();
+    if (!view) {
+      return '';
+    }
+    return view.isMine ? 'ti' : (view.payout.makerName ?? 'otra persona de la organización');
+  });
+
+  /** Firma ya registrada: la definitiva si el pago salió, o la primera si aún espera la segunda. */
+  protected readonly approverName = computed(() => {
+    const payout = this.payout();
+    if (!payout) {
+      return null;
+    }
+    const userId = payout.approverUserId ?? payout.firstApproverUserId;
+    if (!userId) {
+      return null;
+    }
+    if (userId === this.session.operator()?.userId) {
+      return 'ti';
+    }
+    return (payout.approverUserId ? payout.approverName : payout.firstApproverName) ?? 'otra persona de la organización';
+  });
+
   protected readonly accountName = computed(() => {
     const account = this.view()?.account;
     return account ? accountLabel(account) : 'Cuenta no disponible';

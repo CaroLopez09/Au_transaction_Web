@@ -12,6 +12,8 @@ const EXPECTED: Record<Capability, readonly Role[]> = {
   'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'operators.view': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'operators.manage': ['ADMIN'],
   'platform.console': ['PLATFORM_OPERATOR'],
 };
 

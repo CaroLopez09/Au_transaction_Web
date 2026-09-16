@@ -251,3 +251,41 @@ límite, recotización de un pago pendiente y código para soporte (`X-Request-I
   `VERIFIED`).
 - Casilla de términos: sin versión configurada en local no se muestra; se probó con
   `BFF_TERMS_VERSION` definida contra el BFF.
+
+## Ronda 6 — Empatar front y BFF: nombres, equipo y campos pendientes (16-sep-2026)
+
+Alcance: lo que el BFF tenía y el portal no mostraba, y lo que el portal pedía sin ofrecer dónde
+escribirlo.
+
+| Hueco | Qué se hizo |
+|---|---|
+| G-03 | `PayoutView` trae `makerName`, `approverName` y `firstApproverName`. La bandeja dice «Preparado por Ana Restrepo» en vez de «otra persona», y el detalle muestra la firma registrada |
+| G-26 | `PayoutView.recipientName` sale del espejo local (también archivados). El directorio queda de respaldo |
+| G-13 | Página «Equipo» (`/equipo`) sobre `/api/operators`, que el BFF exponía desde el 15-sep sin pantalla: alta con rol y contraseña inicial, y baja que suspende. Capacidades `operators.view` (A, C) y `operators.manage` (A) |
+| G-16 (parcial) | Los `pendingFields` se muestran traducidos junto a su nombre técnico; los que el asistente todavía no captura lo dicen en pantalla |
+| G-18 | `GET /api/capabilities` en el BFF (`sandbox`, `providerConfigured`, `bank`, `providerApiVersion`, `dualApprovalThreshold`). El front lo pregunta una vez por sesión y se eliminó la bandera de compilación `sandboxTools`: ya no depende de cómo se compiló |
+
+### Contrato comprobado con peticiones reales
+
+- `GET /api/operators` con `admin@juriscop.test`: 5 operadores de la semilla (uno por rol de empresa), con `role`,
+  `roleDescription`, `status`, `active` y `mfaEnabled`; ni hash de contraseña ni secreto TOTP.
+- `GET /api/payouts` con la organización de la semilla: `[]` (no hay pagos en dev), así que los
+  nombres se verificaron con pruebas del BFF, no con datos reales.
+- `GET /api/capabilities` en local: `sandbox: true`, `providerConfigured: true`, `bank: jp_morgan`,
+  `providerApiVersion: 2026-06-01`, `dualApprovalThreshold: 10000`.
+
+### Resultados automáticos
+
+- Front: unitarias **178/178**, lint limpio, **E2E 34/34** (1 omitida por diseño).
+- BFF: **430** pruebas, 0 fallos.
+
+### Pendiente / no verificado
+
+- Los nombres de maker y aprobadores **no se han visto con un pago real**: en dev no hay ninguno.
+- `transaction_countries` (G-28) sigue sin campo: falta saber si el proveedor espera ISO alfa-2 o
+  alfa-3. Hasta entonces el asistente lo anuncia como no capturable en vez de aceptar un formato a ciegas.
+- Alta de operador probada contra el BFF solo en lectura: no se creó ningún usuario en la base de dev.
+- `sandbox: false` (producción) no se ha probado en vivo: el botón de simular depósito desaparece
+  según la respuesta del BFF, verificado con prueba unitaria del servicio de capacidades.
+- **D6 ya estaba cubierto:** `unsupportedReason` sí se muestra (`productUnavailableReason` en
+  `onboarding-copy.ts`), al contrario de lo que decía la revisión del 15-sep.

@@ -1,5 +1,7 @@
 # Contrato frontend ↔ backend (BFF AuTransactional)
 
+> **Estado de implementación (16-sep-2026):** `/api/operators` conectado en la página «Equipo»; `PayoutView` trae los nombres de maker, aprobadores y destinatario.
+>
 > **Estado de implementación (14-sep-2026):** las 46 operaciones de las secciones 1.1–1.10 tienen repositorio HTTP en el front. El asistente de Vinculación conecta además el borrador, el alta KYB, el perfil, los documentos KYB, `POST /api/ubos/sync` y `POST /api/ubos/liveness-links`. Sin conectar a UI: `GET /api/recipients/{id}` y `/{id}/kira`, `GET /api/quotations`, `POST /api/payouts/preview`.
 
 > Fuente de verdad: código de `~/Documentos/AuTransactional` (rama `main`, auditado sobre `ed853d3` + cambios sin commitear,
@@ -171,7 +173,8 @@ Reglas: TTL 15 min fijado por Kira. `amount` = lo que **recibe** el destinatario
 | 36 | `GET /api/payouts/{id}/events` | `…events` | `…events` | `PayoutDetailPage` | `PayoutTimeline` | `PayoutEventViewDto[]{eventId?,status?,message?,createdAt?}` | `PayoutEvent` | Todos |
 | 37 | `POST /api/payouts/{id}/refresh` | `…refreshFromKira` | `…refresh` | `PayoutDetailPage` | `RefreshButton` | `PayoutViewDto` | `Payout` | A, M, P, C |
 
-`PayoutViewDto`: `id, virtualAccountId, recipientId, quotationId?, amount, currency, kiraFee, platformFee, totalFee, totalDebitAmount, approvalState (PENDING_APPROVAL|APPROVED|REJECTED|SUBMITTED), status (NOT_SUBMITTED|CREATED|PENDING|PROCESSING|KYT_PENDING|IN_REVIEW|COMPLETED|FAILED|EXPIRED|UNKNOWN), terminal, makerUserId, approverUserId?, priceLocked, kiraPayoutId?, referenceNumber?, paymentMethod?, errorCode?, blockedByRfiId?, createdAt, updatedAt?`.
+`PayoutViewDto`: `id, virtualAccountId, recipientId, recipientName?, quotationId?, amount, currency, kiraFee, platformFee, totalFee, totalDebitAmount, approvalState (PENDING_APPROVAL|APPROVED|REJECTED|SUBMITTED), status (NOT_SUBMITTED|CREATED|PENDING|PROCESSING|KYT_PENDING|IN_REVIEW|COMPLETED|FAILED|EXPIRED|UNKNOWN), terminal, makerUserId, makerName?, approverUserId?, approverName?, firstApproverUserId?, firstApproverName?, requiredApprovals, priceLocked, kiraPayoutId?, referenceNumber?, paymentMethod?, errorCode?, blockedByRfiId?, createdAt, updatedAt?`.
+Nombres (16-sep): el BFF resuelve `recipientName` contra el espejo local (también archivados, G-26) y `makerName`/`approverName`/`firstApproverName` contra la tabla de operadores (G-03), una sola lectura por id y petición. Un operador que ya no existe deja el nombre ausente y conserva el id. La consola de plataforma (`/api/platform/tenants/{id}`) sigue enviando los pagos sin nombres.
 `natureOfPayment ∈ vendor|pobo|first_party|spot_3p|spot_1p|related_entities|other`. Filtro `status` del historial Kira ∈ `CREATED|PENDING|PROCESSING|COMPLETED|FAILED|CANCELLED|IN_REVIEW|KYT_PENDING`; `limit` 1–100.
 Reglas: el aprobador **no puede** ser el creador (validado en la entidad). Aprobar exige cotización vigente y saldo. El KYB debe estar `VERIFIED` para crear. Un pago sin cotización **hoy se permite** (decisión abierta §5.2 de `ESTADO.md`). `blockedByRfiId` → mostrar "detenido" con enlace al RFI.
 
@@ -197,12 +200,30 @@ Reglas: `PATCH` es **todo o nada**: `422 rfi_answer_rejected` con `details` por 
 | # | Endpoint | Caso de uso BFF | Repository | Página | Componente | DTO | Modelo | Rol |
 |---|---|---|---|---|---|---|---|---|
 | 46 | `GET /api/reference/countries` | `ReferenceCatalogService.countries` (cache 24 h, llama a Kira) | `ReferenceRepository.countries` | formularios UBO/destinatario | `CountrySelect` | `CountryViewDto[]{name, alpha3, postalCodeFormat?, subdivisions[{name,code}]}` | `Country` | Todos |
+| 46b | `GET /api/capabilities` | `CapabilitiesController` (configuración, sin Kira) | `EnvironmentCapabilities.load` | `AppShell` (una vez por sesión) | `AccountDetailPage` (botón de simular depósito) | `{sandbox, providerConfigured, bank?, providerApiVersion?, dualApprovalThreshold?}` | `EnvironmentInfo` | Todos |
 
-### 1.11 Fuera del alcance del navegador
+### 1.11 Operadores de la empresa — dominio `operators`
+
+| # | Endpoint | Caso de uso BFF | Repository | Página | Componente | DTO | Modelo | Rol |
+|---|---|---|---|---|---|---|---|---|
+| 47 | `GET /api/operators` | `ManageOperatorsService.list` | `OperatorRepository.list` | `TeamPage` (`/equipo`) | tabla del equipo | `OperatorViewDto[]` | `Operator` | A, C |
+| 48 | `POST /api/operators` | `…create` | `…create` | `TeamPage` | `Drawer` «Añadir persona» | req `{email*, firstName*, lastName*, password* (12–100), role*}` · res `OperatorViewDto` | `Operator` | A |
+| 49 | `DELETE /api/operators/{id}` | `…suspend` | `…suspend` | `TeamPage` | `ConfirmDialog` | — · res `OperatorViewDto` con `status: SUSPENDED` | `Operator` | A |
+
+`OperatorViewDto`: `id, email, firstName?, lastName?, fullName?, role, roleDescription?, status, active, mfaEnabled`.
+Nunca lleva el hash de la contraseña ni el secreto TOTP.
+Reglas: la empresa sale del JWT (no hay ruta para operadores de otra organización). Roles asignables:
+`TREASURY_MAKER`, `TREASURY_APPROVER`, `COMPLIANCE_INTERNAL`, `READ_ONLY` — `ADMIN` y `PLATFORM_OPERATOR` los
+rechaza el BFF con `422` (escalar privilegios desde el portal no es posible). Correo único en toda la plataforma
+(`422 "Ya existe un usuario con ese correo."`). La baja **suspende**, no borra: quien firmó un pago sigue siendo su
+autor. Nadie se desactiva a sí mismo (`422`), y la UI tampoco ofrece el botón. La contraseña inicial la fija quien
+da de alta y el portal no vuelve a mostrarla; el segundo factor lo activa cada persona desde `/seguridad`.
+
+### 1.12 Fuera del alcance del navegador
 
 | # | Endpoint | Motivo |
 |---|---|---|
-| 47 | `POST /api/webhooks/kira` | Entrada HMAC de Kira. Nunca la llama el front. |
+| 50 | `POST /api/webhooks/kira` | Entrada HMAC de Kira. Nunca la llama el front. |
 | — | `GET /actuator/health` | Público. Útil solo para diagnóstico de conectividad. |
 | — | `/swagger-ui.html`, `/v3/api-docs` | Solo dev/cert; apagado en prod. |
 
@@ -222,8 +243,10 @@ Reglas: `PATCH` es **todo o nada**: `422 rfi_answer_rejected` con `details` por 
 | Sincronizar / responder RFI, subir y borrar documentos | ✓ | | | ✓ | |
 | Refrescar desde Kira (onboarding, cuenta, saldo, depósitos, pago) | ✓ | ✓ | ✓ | ✓ | |
 | Descargar documento de RFI (enlace temporal, auditado) | ✓ | | | ✓ | |
+| Ver el equipo de la empresa (`/equipo`) | ✓ | | | ✓ | |
+| Crear o desactivar operadores | ✓ | | | | |
 
-Capacidades del front: `provider.refresh` y `rfis.manage` (G-09, cerrado el 15-sep).
+Capacidades del front: `provider.refresh` y `rfis.manage` (G-09, cerrado el 15-sep); `operators.view` y `operators.manage` (G-13, cerrado el 16-sep).
 
 La UI oculta o deshabilita acciones por rol **por claridad**, no por seguridad: el `@PreAuthorize` del BFF es la barrera real y la UI debe tratar un `403 forbidden` como caso normal.
 
@@ -257,7 +280,7 @@ Nota: los mensajes del BFF llegan **sin tildes** (`"Credenciales invalidas."`). 
 |---|---|---|---|---|---|---|---|
 | G-01 | ~~Consola multiempresa (clientes, ficha 360, bandeja REVIEW)~~ ✅ Cerrado 15-sep: rol `PLATFORM_OPERATOR` y `/api/platform/*` (clientes, ficha 360, bandeja de revisión), solo lectura. | Operaciones/compliance interno ve todos los clientes | Todos los roles son `TENANT`; no hay `GET` de organizaciones | No existe la experiencia "Consola de operaciones" | Esa experiencia no se construye | Rol `SYSTEM` + endpoints `/api/admin/tenants` con auditoría | Alta (si el piloto la necesita) |
 | G-02 | ~~Nombre de organización tras recargar~~ ✅ Cerrado 15-sep: `/api/auth/me` trae `tenantName`. | Mostrar organización en el shell | `tenantName` solo en `login`; `/me` no lo trae | Se obtiene de `GET /api/onboarding.name` | Menor; una llamada extra | Añadir `tenantName` a `/me` | Baja |
-| G-03 | Nombre del maker/aprobador | "Creado por Ana" en pagos | Vistas solo traen `makerUserId`/`approverUserId`; no hay endpoint de operadores | Se muestra "tú" si coincide con `/me.userId`; si no, "otro operador" | Trazabilidad visual pobre | `makerName`/`approverName` en `PayoutView` o `GET /api/operators` | Media |
+| G-03 | ~~Nombre del maker/aprobador~~ ✅ Cerrado 16-sep: `PayoutView` trae `makerName`, `approverName` y `firstApproverName`, resueltos en el BFF contra la tabla de operadores. | "Preparado por Ana" en pagos | — | La lista y el detalle muestran el nombre; «ti» cuando es la propia sesión y el id cuando la cuenta ya no existe | — | — | — |
 | G-04 | Cierre de sesión | Logout que invalide el token | Stateless, sin revocación; JWT 8 h | Logout solo local (se descarta el token) | Token robado vale hasta expirar | Lista de revocación o tokens cortos + refresh en cookie `HttpOnly` | Media |
 | G-05 | Renovación de sesión | Mantener sesión en trabajos largos | Sin refresh token | Al expirar se vuelve a login (con retorno a la ruta) | Interrupción cada 8 h | Refresh token en cookie `HttpOnly` | Baja |
 | G-06 | CORS / origen | Front servido aparte en despliegue | Sin CORS | Dev: proxy; prod: mismo origen obligatorio | Restricción de despliegue | Documentar reverse proxy o CORS explícito por entorno | Media |
@@ -267,12 +290,12 @@ Nota: los mensajes del BFF llegan **sin tildes** (`"Credenciales invalidas."`). 
 | G-10 | Mensajes con tildes / i18n | Español correcto | Mensajes del BFF sin tildes | Se muestran tal cual | Cosmético | Mensajes UTF-8 o códigos estables por regla | Baja |
 | G-11 | ~~Notificaciones~~ ✅ Cerrado 15-sep: `/api/notifications` y contador en la navegación. | Centro de avisos | No hay endpoint | Sin módulo de notificaciones | — | `GET /api/notifications` sobre `webhooks_log` | Media |
 | G-12 | ~~Auditoría~~ ✅ Cerrado 15-sep: `GET /api/audit` y página «Auditoría». | Historial de acciones | `AuditTrail` escribe `audit_log`, no hay lectura | Sin módulo de auditoría | — | `GET /api/audit` paginado | Media |
-| G-13 | Administración de operadores | Alta/baja de usuarios y roles | No hay endpoint (`ESTADO.md §4.3`) | Sin módulo de administración | Usuarios solo por semilla/BD | CRUD de operadores con maker-checker | Media |
+| G-13 | ~~Administración de operadores~~ ✅ Cerrado 16-sep: `/api/operators` (BFF, 15-sep) y página «Equipo» (`/equipo`) en el front. | Alta/baja de usuarios y roles | `GET/POST/DELETE /api/operators` | La baja suspende (no borra) y ADMIN/PLATFORM_OPERATOR no se asignan desde el portal | — | — | — |
 | G-14 | Paginación y filtros | Tablas con filtros/orden servidor | Listas locales solo `limit`; solo `/payouts/kira` pagina | Filtros solo en cliente sobre ≤`limit` filas | Históricos grandes incompletos | `page`, `status`, `from/to` en listas locales | Media |
 | G-15 | ~~Documentos corporativos KYB~~ ✅ Cerrado 14-sep: `POST /api/onboarding/documents` y `POST /api/ubos/{id}/documents`. | Carga de documentos de empresa/UBO | `PUT /api/onboarding` acepta `profile` libre; no hay endpoint de subida KYB | Solo campos que Kira pida vía `pendingFields` | Documentos KYB no gestionables con UX propia | Endpoint de documentos KYB | Media |
-| G-16 | Etiquetas de `pendingFields` | Etiquetas humanas y tipo de control | Solo nombres técnicos de Kira (`business_type`) sin tipo ni opciones | Diccionario de etiquetas en el front; control texto por defecto | Formulario técnico | Exponer esquema (tipo, opciones, obligatoriedad) | Alta |
+| G-16 | Etiquetas de `pendingFields` (parcial) | Etiquetas humanas y tipo de control | Solo nombres técnicos de Kira (`business_type`) sin tipo ni opciones | **16-sep:** diccionario `pending-field-labels.ts` en el front: cada campo pendiente se muestra en español junto a su nombre técnico, y los que el asistente todavía no captura (`transaction_countries`, `expected_monthly_payments`, `physical_address`) lo dicen en pantalla | Falta el tipo de control y las opciones, que siguen sin viajar | Exponer esquema (tipo, opciones, obligatoriedad) | Media |
 | G-17 | ~~Borrar UBO~~ ✅ Cerrado 15-sep: `DELETE /api/ubos/{id}` mientras el proveedor no conozca a la persona (`knownToKira`). | Quitar un beneficiario mal cargado | No hay `DELETE /api/ubos/{id}` | Sin acción de borrar | Correcciones imposibles desde UI | Endpoint de baja local antes de sync | Media |
-| G-18 | Entorno sandbox en el front | Mostrar "Simular depósito" solo en sandbox | `kira.sandbox` no se expone | Se muestra por configuración del front; el BFF responde 422 en prod | Botón visible que falla si se configura mal | Exponer capacidades del entorno (`GET /api/capabilities`) | Baja |
+| G-18 | ~~Entorno sandbox en el front~~ ✅ Cerrado 16-sep: `GET /api/capabilities` (`sandbox`, `providerConfigured`, `bank`, `providerApiVersion`, `dualApprovalThreshold`). El front dejó de usar `environment.sandboxTools`. | Mostrar "Simular depósito" solo en sandbox | — | Hasta que llega la respuesta se asume lo prudente: sin herramientas de sandbox | — | — | — |
 | G-20 | ~~Tipos de documento de UBO~~ ✅ Cerrado 15-sep: selector con los tipos de documento con foto del proveedor. | Selector con los valores válidos | `documentType` es texto libre; solo `national_id` está documentado | Campo de texto con sugerencia `national_id` | Errores de tipeo llegan al proveedor | Exponer catálogo de tipos de documento | Media |
 | G-21 | ~~Edición de UBO~~ ✅ Cerrado 15-sep: la edición aplica nombre, apellido y cargo; la vista trae `firstName`/`lastName`. | Corregir nombre, apellido o cargo | `POST /api/ubos` con `id` los exige (`@NotBlank`) pero no los aplica; la vista solo trae `fullName` | Nombre y cargo de solo lectura en edición; el front reenvía el nombre vigente para pasar la validación | Un nombre mal escrito no se puede corregir (y tampoco borrar, G-17) | Aplicar nombre/cargo en edición y exponer `firstName`/`lastName` en `UboView` | Alta |
 | G-22 | Catálogo de países sin proveedor | Selector de país siempre disponible | `GET /api/reference/countries` depende de Kira → `503` sin credenciales | El formulario acepta código ISO-3 cuando el catálogo no responde | UX más técnica en entornos sin credenciales; el navegador registra el `503` en consola | Catálogo ISO local de respaldo en el BFF | Baja |
@@ -283,5 +306,5 @@ Nota: los mensajes del BFF llegan **sin tildes** (`"Credenciales invalidas."`). 
 | G-28 | Países de operación (`transaction_countries`) | Selección múltiple de países | La documentación no aclara si son ISO-2 o ISO-3 y el catálogo del BFF es ISO-3 | No se pide en el asistente | Ídem G-27 | Documentar el formato y validarlo en el BFF | Media |
 | G-29 | Esquema del borrador en `cert`/`prod` | Guardar borradores en todos los entornos | Las columnas nuevas solo se crean solas en `dev` (`ddl-auto: update`) | SQL manual en §1.2 | Sin la migración el BFF no arranca en `cert`/`prod` (`validate`) | Adoptar migraciones versionadas (Flyway) | Alta |
 | G-30 | Documentos en el borrador | Dejar un documento «a medio subir» | El BFF no almacena archivos; van directo a Kira y solo con el expediente creado | Los pasos de documentos se habilitan tras «Enviar al proveedor»; el borrador anota lo ya enviado | No se pueden adelantar documentos antes del alta | Ninguno (por diseño: no guardar documentos de identidad en el BFF) | Baja |
-| G-26 | Destinatarios archivados en pagos | Nombre del destinatario de un pago antiguo | `GET /api/recipients` solo devuelve activos | El detalle de pago muestra «No disponible en el directorio» | Pagos históricos sin nombre de destinatario | Incluir `recipientName` en `PayoutView` | Baja |
+| G-26 | ~~Destinatarios archivados en pagos~~ ✅ Cerrado 16-sep: `PayoutView.recipientName` sale del espejo local, incluidos los archivados. | Nombre del destinatario de un pago antiguo | — | El directorio queda solo como respaldo | — | — | — |
 | G-19 | ~~Instrucciones cripto de pago~~ **Fuera de alcance (15-sep):** el piloto no usa cripto | QR, dirección, expiración | No existe en vistas | No se construye | — | — | — |

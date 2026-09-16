@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, si
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SessionStore } from '../../../core/auth/session.store';
-import { APP_CONFIG } from '../../../core/configuration/app-config';
+import { EnvironmentCapabilities } from '../../../core/configuration/environment-capabilities';
 import { UserFacingError } from '../../../core/http/error-mapping';
 import { CopyButton } from '../../../shared/ui/copy-button';
 import { DateTimePipe } from '../../../shared/ui/date-time.pipe';
@@ -48,7 +48,8 @@ export class AccountDetailPage implements OnInit {
   protected readonly facade = inject(AccountsFacade);
   protected readonly deposits = inject(DepositsFacade);
   private readonly session = inject(SessionStore);
-  private readonly sandboxTools = inject(APP_CONFIG).sandboxTools;
+  /** El entorno lo dice el BFF (G-18), no la compilación del front. */
+  private readonly environment = inject(EnvironmentCapabilities).info;
 
   protected readonly account = computed(() => dataOf(this.facade.detail()));
   protected readonly detailError = computed(() => errorOf(this.facade.detail()));
@@ -64,7 +65,8 @@ export class AccountDetailPage implements OnInit {
       readiness: readinessCopy(accountReadiness(account)),
       queryable: canQueryProvider(account) && this.session.can('provider.refresh'),
       mode: modeLabel(account.mode),
-      canSimulate: this.sandboxTools && this.session.can('accounts.simulateDeposit') && canQueryProvider(account),
+      canSimulate:
+        this.environment().sandbox && this.session.can('accounts.simulateDeposit') && canQueryProvider(account),
     };
   });
 

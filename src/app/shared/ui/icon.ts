@@ -29,6 +29,8 @@ const ICONS = {
   bell: 'M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0',
   activity: 'M3.5 12h4l2.5-6 4 12 2.5-6h4',
   building: 'M5 20.5V4.5h9v16M14 9.5h5v11M8 8h3M8 11.5h3M8 15h3M3.5 20.5h17',
+  users:
+    'M9.5 11.5a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5zM3 19.5c.7-3 3.1-4.75 6.5-4.75S15.3 16.5 16 19.5M15.5 5.6a3.25 3.25 0 0 1 0 6.3M17.5 15.2c2 .7 3.3 2.1 3.8 4.3',
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -25,5 +25,6 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/avisos', label: 'Avisos', icon: 'bell', requires: null, exact: false },
   { path: '/eventos', label: 'Eventos', icon: 'activity', requires: 'activity.audit', exact: false },
   { path: '/auditoria', label: 'Auditoría', icon: 'history', requires: 'activity.audit', exact: false },
+  { path: '/equipo', label: 'Equipo', icon: 'users', requires: 'operators.view', exact: false },
   { path: '/operaciones', label: 'Operaciones', icon: 'building', requires: 'platform.console', exact: false },
 ];

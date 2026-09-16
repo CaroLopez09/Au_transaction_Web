@@ -1,0 +1,24 @@
+.sub {
+  display: block;
+  color: var(--au-text-muted);
+  font-size: var(--au-fs-data);
+}
+
+.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.drawer-actions {
+  display: flex;
+  gap: var(--au-space-2);
+}
+
+.notice-title {
+  font-weight: 500;
+}
+
+.au-help {
+  margin-top: var(--au-space-4);
+  color: var(--au-text-muted);
+}

@@ -11,6 +11,7 @@ const AREAS = [
   { path: '/avisos', heading: 'Avisos' },
   { path: '/eventos', heading: 'Eventos del proveedor' },
   { path: '/auditoria', heading: 'Auditoría' },
+  { path: '/equipo', heading: 'Equipo' },
 ];
 
 const NAV_LABEL: Record<string, string> = {
@@ -38,6 +39,7 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
       'Avisos',
       'Eventos',
       'Auditoría',
+      'Equipo',
       'Seguridad',
     ]);
     for (const area of AREAS) {
@@ -84,6 +86,17 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
     await expect(page).toHaveURL('/');
     await page.goto('/destinatarios');
     await expect(page.getByRole('link', { name: 'Registrar destinatario' })).toHaveCount(0);
+    // El equipo es de Administración y Cumplimiento: Consulta ni siquiera lo ve por URL.
+    await page.goto('/equipo');
+    await expect(page).toHaveURL('/');
+  });
+
+  test('Cumplimiento ve el equipo pero no puede dar de alta ni desactivar', async ({ page }) => {
+    await signIn(page, 'compliance.internal@juriscop.test', '/equipo');
+    await expect(page.getByRole('heading', { level: 1, name: 'Equipo' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'admin@juriscop.test', exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Añadir persona' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Desactivar' })).toHaveCount(0);
   });
 
   test('un recurso de otra organización o inexistente muestra el mensaje del BFF, no una pantalla rota', async ({

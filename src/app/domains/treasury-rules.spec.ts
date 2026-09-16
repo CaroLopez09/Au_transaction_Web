@@ -197,6 +197,23 @@ describe('cotizaciones y pagos', () => {
       ...overrides,
     });
 
+  it('los nombres del BFF llegan al modelo y su ausencia no rompe la vista', () => {
+    const conNombres = payout({
+      recipientName: 'Acme Corp',
+      makerName: 'Ana Restrepo',
+      firstApproverUserId: 'org:treasury_approver',
+      firstApproverName: 'Luis Gómez',
+    });
+    expect(conNombres.recipientName).toBe('Acme Corp');
+    expect(conNombres.makerName).toBe('Ana Restrepo');
+    expect(conNombres.firstApproverName).toBe('Luis Gómez');
+
+    const sinNombres = payout();
+    expect(sinNombres.recipientName).toBeNull();
+    expect(sinNombres.makerName).toBeNull();
+    expect(sinNombres.approverName).toBeNull();
+  });
+
   it('quien prepara no aprueba (Payout.approve)', () => {
     expect(approvalBlocker(payout(), 'org:treasury_maker')).toBe('own-payout');
     expect(approvalBlocker(payout(), 'org:treasury_approver')).toBeNull();

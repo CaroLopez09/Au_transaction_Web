@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Icon } from '../../../../shared/ui/icon';
+import { pendingFieldLabel } from '../../domain/pending-field-labels';
 
 /** Lo que falta para completar un paso. No bloquea guardar: es una guía. */
 @Component({
@@ -22,8 +23,16 @@ import { Icon } from '../../../../shared/ui/icon';
         @if (pending().length) {
           <p class="title">El proveedor todavía pide:</p>
           <ul>
-            @for (field of pending(); track field) {
-              <li class="au-mono">{{ field }}</li>
+            @for (item of labelled(); track item.field) {
+              <li>
+                {{ item.label ?? item.field }}
+                @if (item.label) {
+                  <span class="au-mono field">{{ item.field }}</span>
+                }
+                @if (!item.capturable) {
+                  <span class="note">El asistente aún no tiene este campo: escríbelo a soporte de AU.</span>
+                }
+              </li>
             }
           </ul>
         }
@@ -56,10 +65,19 @@ import { Icon } from '../../../../shared/ui/icon';
     ul + .title {
       margin-top: var(--au-space-3);
     }
+    .field {
+      color: var(--au-text-muted);
+    }
+    .note {
+      display: block;
+      color: var(--au-text-muted);
+    }
   `,
 })
 export class StepGaps {
   readonly gaps = input.required<readonly string[]>();
   readonly pending = input<readonly string[]>([]);
   readonly doneLabel = input('Paso completo.');
+  /** El nombre técnico se conserva al lado de la etiqueta: es lo que entiende soporte. */
+  protected readonly labelled = computed(() => this.pending().map(pendingFieldLabel));
 }

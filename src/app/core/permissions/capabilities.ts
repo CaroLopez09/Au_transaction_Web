@@ -24,6 +24,10 @@ export const CAPABILITY_ROLES = {
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   /** GET /api/events, GET /api/audit */
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** GET /api/operators (Cumplimiento necesita saber quién firma cada operación) */
+  'operators.view': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** POST /api/operators, DELETE /api/operators/{id} */
+  'operators.manage': ['ADMIN'],
   /** GET /api/platform/** (consola multiempresa) */
   'platform.console': ['PLATFORM_OPERATOR'],
 } as const satisfies Record<string, readonly Role[]>;

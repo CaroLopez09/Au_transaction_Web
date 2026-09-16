@@ -170,7 +170,7 @@
       <dl class="au-dl">
         <dt>Destinatario</dt>
         <dd>
-          {{ current.recipient?.name ?? 'No disponible en el directorio' }}
+          {{ recipientName() }}
           @if (current.recipient?.maskedDestination) {
             <span class="au-num sub">{{ current.recipient.rail }} {{ current.recipient.maskedDestination }}</span>
           }
@@ -178,9 +178,11 @@
         <dt>Cuenta de origen</dt>
         <dd>{{ accountName() }}</dd>
         <dt>Preparado por</dt>
-        <dd>
-          {{ current.isMine ? 'ti' : 'otra persona de la organización' }} · {{ current.payout.createdAt | auDateTime }}
-        </dd>
+        <dd>{{ makerName() }} · {{ current.payout.createdAt | auDateTime }}</dd>
+        @if (approverName(); as approver) {
+          <dt>{{ current.payout.approverUserId ? 'Aprobado por' : 'Primera firma de' }}</dt>
+          <dd>{{ approver }}</dd>
+        }
         <dt>Precio</dt>
         <dd>{{ current.payout.priceLocked ? 'Cerrado con cotización' : 'Sin cotización' }}</dd>
         @if (current.payout.referenceNumber) {

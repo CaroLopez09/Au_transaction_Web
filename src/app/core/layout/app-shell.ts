@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { AuLogo } from '../../shared/ui/au-logo';
 import { Icon } from '../../shared/ui/icon';
+import { EnvironmentCapabilities } from '../configuration/environment-capabilities';
 import { SIGN_IN_PATH } from '../auth/auth.guards';
 import { SessionStore } from '../auth/session.store';
 import { isPlatformRole, roleLabel } from '../permissions/role';
@@ -37,6 +38,8 @@ export class AppShell {
   });
 
   constructor() {
+    // Qué permite el entorno lo dice el BFF: se pregunta una vez por sesión (G-18).
+    void inject(EnvironmentCapabilities).load();
     if (!isPlatformRole(this.session.role())) {
       this.unread.start();
     }

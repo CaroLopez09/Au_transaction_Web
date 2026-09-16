@@ -18,6 +18,8 @@ export interface Payout {
   readonly id: string;
   readonly virtualAccountId: string;
   readonly recipientId: string;
+  /** Nombre resuelto por el BFF: el directorio del portal no lista los destinatarios archivados. */
+  readonly recipientName: string | null;
   readonly quotationId: string | null;
   /** Lo que recibe el destinatario. */
   readonly amount: number | null;
@@ -32,9 +34,13 @@ export interface Payout {
   readonly rawStatus: string;
   readonly terminal: boolean;
   readonly makerUserId: string;
+  /** Nombre y apellido de quien preparó el pago; nulo si esa cuenta ya no existe. */
+  readonly makerName: string | null;
   readonly approverUserId: string | null;
+  readonly approverName: string | null;
   /** Primera firma cuando el pago supera el límite de la empresa y necesita dos. */
   readonly firstApproverUserId: string | null;
+  readonly firstApproverName: string | null;
   /** 1 o 2 aprobaciones, según el límite configurado en el BFF. */
   readonly requiredApprovals: number;
   readonly priceLocked: boolean;

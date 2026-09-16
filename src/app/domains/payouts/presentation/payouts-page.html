@@ -49,7 +49,7 @@
                   <span class="who">
                     <span class="name">{{ recipientName(payout) }}</span>
                     <span class="meta"
-                      >Preparado por {{ isMine(payout) ? 'ti' : 'otra persona' }} ·
+                      >Preparado por {{ makerName(payout) }} ·
                       {{ payout.createdAt | auDateTime }}</span
                     >
                   </span>
