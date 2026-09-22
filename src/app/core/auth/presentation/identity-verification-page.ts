@@ -19,10 +19,7 @@ type ImageKey = 'front' | 'back' | 'selfie';
         <p class="eyebrow">Acceso protegido</p>
         <h1 id="identity-title">Verifica tu identidad</h1>
         <p>Confirma el documento y una imagen actual de tu rostro antes de acceder al portal.</p>
-        @if (!challenge()) {
-          <p class="error">La solicitud expiró. Ingresa nuevamente para obtener una nueva.</p>
-          <a class="au-button au-button--primary" routerLink="/ingresar">Ir a ingresar</a>
-        } @else if (result(); as response) {
+        @if (result(); as response) {
           <p class="notice" role="status">Resultado: {{ response.status }}.</p>
           @if (response.status === 'REJECTED') {
             <p class="error">No pudimos validar tu identidad. Puedes intentar de nuevo con una nueva foto.</p>
@@ -36,6 +33,9 @@ type ImageKey = 'front' | 'back' | 'selfie';
           } @else {
             <a class="au-button au-button--primary" routerLink="/ingresar">Ingresar</a>
           }
+        } @else if (!challenge()) {
+          <p class="error">La solicitud expiró. Ingresa nuevamente para obtener una nueva.</p>
+          <a class="au-button au-button--primary" routerLink="/ingresar">Ir a ingresar</a>
         } @else {
           <form [formGroup]="form" novalidate>
             <p class="au-label" id="front-label">Documento - frente</p>
