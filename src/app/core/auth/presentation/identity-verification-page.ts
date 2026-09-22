@@ -5,14 +5,14 @@ import { RouterLink } from '@angular/router';
 import { toApiError } from '../../http/api-error';
 import { mapApiError } from '../../http/error-mapping';
 import { SessionStore } from '../session.store';
-import { FaceCapture } from './face-capture';
+import { CameraCapture } from './camera-capture';
 
 type ImageKey = 'front' | 'back' | 'selfie';
 
 @Component({
   selector: 'au-identity-verification-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, FaceCapture],
+  imports: [ReactiveFormsModule, RouterLink, CameraCapture],
   template: `
     <main class="identity">
       <section aria-labelledby="identity-title">
@@ -27,15 +27,41 @@ type ImageKey = 'front' | 'back' | 'selfie';
           @if (response.status === 'REJECTED') {
             <p class="error">No pudimos validar tu identidad. Puedes intentar de nuevo con una nueva foto.</p>
             <button type="button" class="au-button au-button--secondary" (click)="retry()">Intentar de nuevo</button>
+          } @else if (response.status === 'IN_REVIEW') {
+            <p class="hint">
+              Tu verificación quedó en revisión manual: aún no puedes ingresar. Te avisaremos cuando esté lista, o
+              puedes intentar de nuevo con una foto más clara.
+            </p>
+            <button type="button" class="au-button au-button--secondary" (click)="retry()">Intentar de nuevo</button>
           } @else {
             <a class="au-button au-button--primary" routerLink="/ingresar">Ingresar</a>
           }
         } @else {
           <form [formGroup]="form" novalidate>
-            <label class="au-label" for="front">Documento - frente</label>
-            <input id="front" type="file" accept="image/jpeg,image/png" capture="environment" (change)="file('front', $event)" />
-            <label class="au-label" for="back">Documento - reverso</label>
-            <input id="back" type="file" accept="image/jpeg,image/png" capture="environment" (change)="file('back', $event)" />
+            <p class="au-label" id="front-label">Documento - frente</p>
+            <au-camera-capture
+              aria-labelledby="front-label"
+              facingMode="environment"
+              activateLabel="Tomar foto del frente"
+              fileNamePrefix="documento-frente"
+              (captured)="onDocumentCaptured('front', $event)"
+            />
+            <label class="au-label" for="front">o sube un archivo</label>
+            <input id="front" type="file" accept="image/jpeg,image/png" (change)="file('front', $event)" />
+            @if (images().front; as selected) { <p class="hint">Imagen lista: {{ selected.name }}</p> }
+
+            <p class="au-label" id="back-label">Documento - reverso</p>
+            <au-camera-capture
+              aria-labelledby="back-label"
+              facingMode="environment"
+              activateLabel="Tomar foto del reverso"
+              fileNamePrefix="documento-reverso"
+              (captured)="onDocumentCaptured('back', $event)"
+            />
+            <label class="au-label" for="back">o sube un archivo</label>
+            <input id="back" type="file" accept="image/jpeg,image/png" (change)="file('back', $event)" />
+            @if (images().back; as selected) { <p class="hint">Imagen lista: {{ selected.name }}</p> }
+
             <label class="au-label" for="document-type">Tipo de documento</label>
             <input id="document-type" class="au-input" formControlName="documentType" />
             <label class="au-label" for="country">País emisor</label>
@@ -43,7 +69,13 @@ type ImageKey = 'front' | 'back' | 'selfie';
             <label class="consent"><input type="checkbox" formControlName="consent" /> Autorizo el tratamiento de mis datos biométricos.</label>
             <p class="au-label" id="selfie-label">Rostro</p>
             @if (canCapture()) {
-              <au-face-capture aria-labelledby="selfie-label" (captured)="onSelfieCaptured($event)" />
+              <au-camera-capture
+                aria-labelledby="selfie-label"
+                facingMode="user"
+                [autoDetect]="true"
+                fileNamePrefix="selfie"
+                (captured)="onSelfieCaptured($event)"
+              />
             } @else {
               <p class="hint">Sube el documento (frente y reverso) y acepta el consentimiento para activar la cámara.</p>
             }
@@ -65,7 +97,7 @@ export class IdentityVerificationPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly result = signal<{ status: string } | null>(null);
-  private readonly images = signal<Partial<Record<ImageKey, File>>>({});
+  protected readonly images = signal<Partial<Record<ImageKey, File>>>({});
 
   private readonly consentChecked = toSignal(this.form.controls.consent.valueChanges, {
     initialValue: this.form.controls.consent.value,
@@ -77,6 +109,10 @@ export class IdentityVerificationPage {
   protected file(key: ImageKey, event: Event): void {
     const selected = (event.target as HTMLInputElement).files?.item(0);
     if (selected) this.images.update((images) => ({ ...images, [key]: selected }));
+  }
+
+  protected onDocumentCaptured(key: 'front' | 'back', file: File): void {
+    this.images.update((images) => ({ ...images, [key]: file }));
   }
 
   protected retry(): void {

@@ -62,10 +62,18 @@ test.describe('Verificación de identidad biométrica', () => {
     });
     await page.getByRole('button', { name: 'Activar cámara' }).click();
 
+    // El video debe tener metadata cargada (videoWidth > 0) antes de capturar; si no, el canvas
+    // queda vacío y el componente no dispara ninguna petición al hacer clic en "Tomar foto".
+    await page.waitForFunction(() => {
+      const video = document.querySelector('au-camera-capture video') as HTMLVideoElement | null;
+      return !!video && video.videoWidth > 0;
+    });
+
     const validation = page.waitForResponse(
       (response) => response.url().includes('/verify-identity') && response.request().method() === 'POST',
+      { timeout: 20_000 },
     );
-    await page.getByRole('button', { name: 'Tomar foto' }).click();
+    await page.getByRole('button', { name: 'Tomar foto', exact: true }).click();
     const response = await validation;
 
     // El resultado depende de si BankVision detecta o no un rostro real en la selfie sintética:
