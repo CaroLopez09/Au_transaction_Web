@@ -36,6 +36,16 @@ export class OperatorHttpRepository extends OperatorRepository {
   suspend(id: string): Observable<Operator> {
     return this.http.delete<OperatorViewDto>(`${this.url}/${encodeURIComponent(id)}`).pipe(map(toOperator));
   }
+
+  reactivate(id: string): Observable<Operator> {
+    return this.http.post<OperatorViewDto>(`${this.url}/${encodeURIComponent(id)}/reactivate`, {}).pipe(map(toOperator));
+  }
+
+  relaunchIdentity(id: string): Observable<Operator> {
+    return this.http
+      .post<OperatorViewDto>(`${this.url}/${encodeURIComponent(id)}/relaunch-identity`, {})
+      .pipe(map(toOperator));
+  }
 }
 
 export function toOperator(dto: OperatorViewDto): Operator {

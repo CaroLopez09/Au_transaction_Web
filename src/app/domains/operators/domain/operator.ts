@@ -46,4 +46,8 @@ export abstract class OperatorRepository {
   abstract create(command: CreateOperator): Observable<Operator>;
   /** DELETE /api/operators/{id} — suspende, no borra: la persona sigue siendo actor de lo que firmó. */
   abstract suspend(id: string): Observable<Operator>;
+  /** POST /api/operators/{id}/reactivate — revierte una desactivación. */
+  abstract reactivate(id: string): Observable<Operator>;
+  /** POST /api/operators/{id}/relaunch-identity — solo para identidades rechazadas. */
+  abstract relaunchIdentity(id: string): Observable<Operator>;
 }

@@ -77,6 +77,28 @@
                           Desactivar
                         </button>
                       }
+                      @if (!operator.active) {
+                        <button
+                          type="button"
+                          class="au-button au-button--secondary"
+                          [disabled]="reactivating() === operator.id"
+                          [attr.aria-busy]="reactivating() === operator.id"
+                          (click)="reactivateOperator(operator)"
+                        >
+                          {{ reactivating() === operator.id ? 'Reactivando…' : 'Reactivar' }}
+                        </button>
+                      }
+                      @if (operator.identityStatus === 'REJECTED') {
+                        <button
+                          type="button"
+                          class="au-button au-button--secondary"
+                          [disabled]="relaunching() === operator.id"
+                          [attr.aria-busy]="relaunching() === operator.id"
+                          (click)="relaunchIdentity(operator)"
+                        >
+                          {{ relaunching() === operator.id ? 'Relanzando…' : 'Relanzar identidad' }}
+                        </button>
+                      }
                     </td>
                   }
                 </tr>
@@ -159,7 +181,7 @@
           }
         </select>
         <p class="au-help">
-          Administración no se asigna desde el portal: crear administradores es alta controlada por AU.
+          Administración también puede asignarse desde el portal: quien crea el equipo decide quién más administra.
         </p>
       </div>
     </form>

@@ -48,6 +48,8 @@ export class TeamPage implements OnInit {
   protected readonly notice = signal<string | null>(null);
   protected readonly toSuspend = signal<Operator | null>(null);
   protected readonly suspending = signal(false);
+  protected readonly reactivating = signal<string | null>(null);
+  protected readonly relaunching = signal<string | null>(null);
   protected readonly actionError = signal<UserFacingError | null>(null);
 
   protected readonly form = this.fb.group({
@@ -141,6 +143,32 @@ export class TeamPage implements OnInit {
   /** Nadie se desactiva a sí mismo: el BFF lo rechaza y la UI no ofrece el botón. */
   protected isMe(operator: Operator): boolean {
     return operator.id === this.session.operator()?.userId;
+  }
+
+  protected async reactivateOperator(operator: Operator): Promise<void> {
+    this.reactivating.set(operator.id);
+    this.actionError.set(null);
+    const result = await runAction(this.repository.reactivate(operator.id));
+    this.reactivating.set(null);
+    if (!result.ok) {
+      this.actionError.set(result.error);
+      return;
+    }
+    this.notice.set(`${result.value.fullName} puede volver a ingresar.`);
+    await this.load();
+  }
+
+  protected async relaunchIdentity(operator: Operator): Promise<void> {
+    this.relaunching.set(operator.id);
+    this.actionError.set(null);
+    const result = await runAction(this.repository.relaunchIdentity(operator.id));
+    this.relaunching.set(null);
+    if (!result.ok) {
+      this.actionError.set(result.error);
+      return;
+    }
+    this.notice.set(`${result.value.fullName} puede volver a validar su identidad.`);
+    await this.load();
   }
 
   protected invalid(control: 'firstName' | 'lastName' | 'email' | 'password'): boolean {
