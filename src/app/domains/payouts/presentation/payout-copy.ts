@@ -17,7 +17,10 @@ export function approvalCopy(state: ApprovalState): { label: string; tone: Statu
 }
 
 /** docs/frontend-architecture.md §8 — pagos. */
-export function statusCopy(status: PayoutStatus): { label: string; tone: StatusTone; explanation: string | null } {
+export function statusCopy(
+  status: PayoutStatus,
+  fundingNetwork: string | null = null,
+): { label: string; tone: StatusTone; explanation: string | null } {
   switch (status) {
     case 'NOT_SUBMITTED':
       return { label: 'Sin enviar', tone: 'neutral', explanation: null };
@@ -52,7 +55,15 @@ export function statusCopy(status: PayoutStatus): { label: string; tone: StatusT
         explanation: 'El pago se detuvo antes de enviarse. No salió dinero de la cuenta.',
       };
     case 'EXPIRED':
-      return { label: 'Vencido', tone: 'neutral', explanation: null };
+      return fundingNetwork
+        ? {
+            label: 'Vencido',
+            tone: 'critical',
+            explanation:
+              'La ventana para depositar el cripto que financiaba este pago venció sin recibirse el depósito. ' +
+              'No se envió dinero al destinatario; prepara un pago nuevo si aún necesitas hacerlo.',
+          }
+        : { label: 'Vencido', tone: 'neutral', explanation: null };
     case 'UNKNOWN':
       return {
         label: 'Estado en validación',
@@ -67,7 +78,9 @@ export function payoutBadge(payout: Payout): { label: string; tone: StatusTone }
   if (payout.blockedByRfiId) {
     return { label: 'Detenido por solicitud de información', tone: 'attention' };
   }
-  return payout.approvalState === 'SUBMITTED' ? statusCopy(payout.status) : approvalCopy(payout.approvalState);
+  return payout.approvalState === 'SUBMITTED'
+    ? statusCopy(payout.status, payout.fundingNetwork)
+    : approvalCopy(payout.approvalState);
 }
 
 /** Significados de docs.kirafin.ai/reference/payouts/values (nature_of_payment), traducidos. */

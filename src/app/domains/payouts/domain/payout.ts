@@ -50,6 +50,11 @@ export interface Payout {
   readonly paymentMethod: string | null;
   readonly errorCode: string | null;
   readonly blockedByRfiId: string | null;
+  /** No nulo cuando el pago se financia con un depósito cripto en vez del saldo (G-19). */
+  readonly fundingNetwork: string | null;
+  readonly fundingCurrency: string | null;
+  /** JSON crudo del proveedor con dirección/red/vencimiento del depósito. Null si no aplica. */
+  readonly depositInstructions: string | null;
   readonly createdAt: Date | null;
   readonly updatedAt: Date | null;
 }
@@ -113,7 +118,22 @@ export interface CreatePayout {
   readonly amount: number;
   readonly currency: string;
   readonly quotationId: string;
+  /** Con ambos presentes, el pago se financia con un depósito cripto en vez del saldo (G-19). */
+  readonly cryptoNetwork?: string | null;
+  readonly cryptoCurrency?: string | null;
 }
+
+/** Pares válidos según WalletToken (dominio del BFF): USDC no existe en tron. */
+export const CRYPTO_FUNDING_PAIRS: Record<string, readonly string[]> = {
+  USDC: ['polygon', 'solana'],
+  USDT: ['polygon', 'solana', 'tron'],
+};
+
+export const CRYPTO_NETWORK_LABELS: Record<string, string> = {
+  polygon: 'Polygon',
+  solana: 'Solana',
+  tron: 'Tron',
+};
 
 /** NatureOfPayment del BFF. */
 export const NATURES_OF_PAYMENT = [

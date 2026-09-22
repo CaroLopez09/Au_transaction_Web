@@ -10,6 +10,8 @@ export interface LoginResultDto {
   mfaChallenge?: string;
   mfaRequired?: boolean;
   mfaSetupRequired?: boolean;
+  identityChallenge?: string;
+  identityUserId?: string;
 }
 
 /** POST /api/auth/mfa/setup → MfaService.MfaSetup */

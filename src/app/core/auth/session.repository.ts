@@ -19,7 +19,22 @@ export type SignInResult =
       readonly challenge: string;
       readonly setupRequired: boolean;
       readonly expiresInSeconds: number;
-    };
+    }
+  | { readonly kind: 'identity'; readonly challenge: string; readonly userId: string; readonly expiresInSeconds: number };
+
+export interface IdentityUpload {
+  readonly documentFrontImage: File;
+  readonly documentBackImage: File;
+  readonly selfieImage: File;
+  readonly documentType: string;
+  readonly countryCode: string;
+  readonly biometricConsent: boolean;
+}
+
+export interface IdentityResult {
+  readonly status: string;
+  readonly verificationId: string | null;
+}
 
 /** Secreto TOTP que se muestra una sola vez para la app autenticadora. */
 export interface MfaEnrollment {
@@ -30,6 +45,7 @@ export interface MfaEnrollment {
 /** Puerto de sesión. Las páginas y el store no conocen HttpClient. */
 export abstract class SessionRepository {
   abstract signIn(email: string, password: string): Observable<SignInResult>;
+  abstract verifyIdentity(challenge: string, userId: string, upload: IdentityUpload): Observable<IdentityResult>;
   /** Recibe el token explícitamente porque se llama antes de fijar la sesión. */
   abstract currentOperator(accessToken: string): Observable<Operator>;
   /** POST /api/auth/mfa/verify — reto del login más el código. */

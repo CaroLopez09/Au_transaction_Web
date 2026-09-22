@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ErrorState } from '../../../shared/ui/error-state';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Skeleton } from '../../../shared/ui/skeleton';
+import { MoneyPipe } from '../../../shared/ui/money.pipe';
 import { dataOf, errorOf } from '../../../shared/utilities/remote-data';
 import { AccountsFacade } from '../../accounts/application/accounts.facade';
 import { accountLabel } from '../../accounts/presentation/account-label';
@@ -10,6 +11,7 @@ import { DepositsFacade } from '../application/deposits.facade';
 import { DepositStatus, Rail } from '../domain/deposit';
 import { depositStatusCopy, HELD_DEPOSITS_NOTICE, RAIL_LABELS } from './deposit-copy';
 import { DepositTable } from './deposit-table';
+import { depositsToCsv, summarizeDeposits } from './deposit-reconciliation';
 
 const STATUSES: DepositStatus[] = ['PENDING', 'COMPLETED', 'KYT_PENDING', 'KYT_REJECTED', 'FAILED', 'REFUNDED'];
 const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
@@ -17,7 +19,7 @@ const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
 @Component({
   selector: 'au-deposits-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeader, ErrorState, Skeleton, DepositTable, RouterLink],
+  imports: [PageHeader, ErrorState, Skeleton, DepositTable, RouterLink, MoneyPipe],
   providers: [DepositsFacade, AccountsFacade],
   template: `
     <au-page-header
@@ -86,6 +88,43 @@ const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
               vista.
             }
           </p>
+          <section class="reconciliation" aria-labelledby="reconciliation-title">
+            <div class="reconciliation-header">
+              <h2 id="reconciliation-title">Conciliación</h2>
+              <button type="button" class="au-button au-button--secondary" (click)="exportCsv()">
+                Exportar CSV
+              </button>
+            </div>
+            @if (summary().length === 0) {
+              <p class="au-notice">Nada que conciliar con los filtros actuales.</p>
+            } @else {
+              <div class="au-table-wrap">
+                <table class="au-table">
+                  <caption class="au-visually-hidden">Totales por moneda y estado</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Moneda</th>
+                      <th scope="col">Estado</th>
+                      <th scope="col" class="au-cell-amount">Depósitos</th>
+                      <th scope="col" class="au-cell-amount">Bruto</th>
+                      <th scope="col" class="au-cell-amount">Neto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of summary(); track row.currency + row.status) {
+                      <tr>
+                        <td>{{ row.currency }}</td>
+                        <td>{{ statusLabel(row.status) }}</td>
+                        <td class="au-cell-amount">{{ row.count }}</td>
+                        <td class="au-cell-amount">{{ row.grossTotal | auMoney: row.currency }}</td>
+                        <td class="au-cell-amount">{{ row.netTotal | auMoney: row.currency }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
           @if (filtered().length === 0) {
             <p class="au-notice">Ningún depósito coincide con los filtros.</p>
           } @else {
@@ -109,6 +148,20 @@ const RAILS: Rail[] = ['ACH', 'WIRE', 'WALLET'];
       margin-bottom: var(--au-space-4);
       color: var(--au-text-muted);
       font-size: var(--au-fs-data);
+    }
+    .reconciliation {
+      margin-bottom: var(--au-space-5);
+    }
+    .reconciliation-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--au-space-3);
+      margin-bottom: var(--au-space-3);
+    }
+    .reconciliation-header h2 {
+      margin: 0;
+      font-size: var(--au-fs-heading-sm, 1rem);
     }
   `,
 })
@@ -142,6 +195,8 @@ export class DepositsPage implements OnInit {
         (!this.accountFilter() || deposit.virtualAccountId === this.accountFilter()),
     ),
   );
+  /** Conciliación calculada sobre lo filtrado: si se acota por cuenta o estado, el resumen lo refleja. */
+  protected readonly summary = computed(() => summarizeDeposits(this.filtered()));
 
   ngOnInit(): void {
     void this.facade.loadAll();
@@ -154,5 +209,17 @@ export class DepositsPage implements OnInit {
 
   protected value(event: Event): string {
     return (event.target as HTMLSelectElement).value;
+  }
+
+  /** Descarga en el navegador: no hay backend de exportación, se arma con lo ya cargado y filtrado. */
+  protected exportCsv(): void {
+    const csv = depositsToCsv(this.filtered());
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `depositos-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }

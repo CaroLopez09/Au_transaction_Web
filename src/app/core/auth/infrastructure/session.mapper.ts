@@ -4,6 +4,14 @@ import { SessionGrant, SignInResult } from '../session.repository';
 import { LoginResultDto, MeDto } from './session.dto';
 
 export function toSignInResult(dto: LoginResultDto): SignInResult {
+  if (dto.identityChallenge && dto.identityUserId) {
+    return {
+      kind: 'identity',
+      challenge: dto.identityChallenge,
+      userId: dto.identityUserId,
+      expiresInSeconds: dto.expiresIn,
+    };
+  }
   if (dto.mfaChallenge) {
     return {
       kind: 'mfa',

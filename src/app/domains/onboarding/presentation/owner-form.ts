@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -15,7 +16,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { UserFacingError } from '../../../core/http/error-mapping';
 import { Icon } from '../../../shared/ui/icon';
@@ -105,10 +106,18 @@ function notInFuture(control: AbstractControl<string>): ValidationErrors | null 
   return !value || value <= new Date().toISOString().slice(0, 10) ? null : { future: true };
 }
 
+function requiredWhen(required: () => boolean): ValidatorFn {
+  return (control) => (required() && !String(control.value ?? '').trim() ? { required: true } : null);
+}
+
 /** @DecimalMax("100.00") del BFF: dos decimales. */
 function twoDecimals(control: AbstractControl<number | null>): ValidationErrors | null {
   const value = control.value;
   return value === null || Math.abs(value * 100 - Math.round(value * 100)) < 1e-6 ? null : { decimals: true };
+}
+
+function toKiraField(name: 'birthDate' | 'nationality' | 'documentNumber'): string {
+  return name === 'birthDate' ? 'birth_date' : name === 'documentNumber' ? 'document_number' : name;
 }
 
 @Component({
@@ -122,6 +131,8 @@ export class OwnerForm implements OnInit {
   /** `null` = alta; con beneficiario = edición. */
   readonly owner = input<BeneficialOwner | null>(null);
   readonly formId = input.required<string>();
+  /** Campos por persona que Kira exige para la empresa actual. */
+  readonly pending = input<readonly string[]>([]);
   readonly saved = output<BeneficialOwner>();
 
   private readonly facade = inject(OnboardingFacade);
@@ -154,10 +165,13 @@ export class OwnerForm implements OnInit {
     politicallyExposed: [null as boolean | null, Validators.required],
     countryOfBirth: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(ISO_ALPHA3_PATTERN)]),
     documentType: this.fb.nonNullable.control(''),
-    documentNumber: this.fb.nonNullable.control(''),
+    documentNumber: this.fb.nonNullable.control('', requiredWhen(() => this.requiredByProvider('documentNumber'))),
     documentCountry: this.fb.nonNullable.control('', Validators.pattern(ISO_ALPHA3_PATTERN)),
-    birthDate: this.fb.nonNullable.control('', notInFuture),
-    nationality: this.fb.nonNullable.control('', Validators.pattern(ISO_ALPHA3_PATTERN)),
+    birthDate: this.fb.nonNullable.control('', [notInFuture, requiredWhen(() => this.requiredByProvider('birthDate'))]),
+    nationality: this.fb.nonNullable.control('', [
+      Validators.pattern(ISO_ALPHA3_PATTERN),
+      requiredWhen(() => this.requiredByProvider('nationality')),
+    ]),
     occupation: this.fb.nonNullable.control('', Validators.maxLength(100)),
     gender: this.fb.nonNullable.control<Gender | ''>(''),
     phoneNumber: this.fb.nonNullable.control('', Validators.pattern(E164_PATTERN)),
@@ -181,6 +195,15 @@ export class OwnerForm implements OnInit {
     }
     return qualifiesAsBeneficialOwner(hasOwnership, this.percentage()) ? 'qualifies' : 'does-not-qualify';
   });
+
+  constructor() {
+    effect(() => {
+      this.pending();
+      this.form.controls.birthDate.updateValueAndValidity({ emitEvent: false });
+      this.form.controls.nationality.updateValueAndValidity({ emitEvent: false });
+      this.form.controls.documentNumber.updateValueAndValidity({ emitEvent: false });
+    });
+  }
 
   ngOnInit(): void {
     const owner = this.owner();
@@ -230,6 +253,10 @@ export class OwnerForm implements OnInit {
   protected invalid(name: FieldName): boolean {
     const control = this.form.controls[name];
     return (control.invalid && (control.touched || this.submitted())) || !!this.serverError()?.fieldErrors[name];
+  }
+
+  protected requiredByProvider(name: 'birthDate' | 'nationality' | 'documentNumber'): boolean {
+    return this.pending().includes(`associated_persons:${toKiraField(name)}`);
   }
 
   protected errorFor(name: FieldName): string | null {

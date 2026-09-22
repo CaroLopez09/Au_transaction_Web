@@ -19,7 +19,9 @@ import { OnboardingFacade } from '../../onboarding/application/onboarding.facade
 import { RecipientsFacade } from '../application/recipients.facade';
 import {
   BankAccountKind,
+  DOC_TYPES,
   isBlankAddress,
+  isValidAbaRoutingNumber,
   ISO_ALPHA2_PATTERN,
   MAX_PHONE_LENGTH,
   networksFor,
@@ -33,16 +35,35 @@ import {
 
 type Rail = 'ACH' | 'WIRE' | 'WALLET';
 
+/**
+ * El proveedor rechaza el routing number con un 400 recien al enviarlo (checksum ABA). Validarlo
+ * aqui evita ese viaje redondo y el destinatario nunca queda a medio registrar.
+ */
+const abaChecksumValidator: ValidatorFn = (control) => {
+  const value = control.value as string;
+  if (!value || !ROUTING_NUMBER_PATTERN.test(value) || isValidAbaRoutingNumber(value)) {
+    return null;
+  }
+  return { abaChecksum: true };
+};
+
 const MESSAGES: Record<string, Record<string, string>> = {
   companyName: { required: 'Escribe la razón social.' },
   firstName: { required: 'Escribe el nombre.' },
   lastName: { required: 'Escribe el apellido.' },
   email: { email: 'Escribe un correo válido.' },
   phone: { maxlength: `Máximo ${MAX_PHONE_LENGTH} caracteres.` },
-  routingNumber: { required: 'Escribe el routing number.', pattern: 'Debe tener exactamente 9 dígitos.' },
+  routingNumber: {
+    required: 'Escribe el routing number.',
+    pattern: 'Debe tener exactamente 9 dígitos.',
+    abaChecksum: 'Ese routing number no existe: el dígito verificador no coincide.',
+  },
   accountNumber: { required: 'Escribe el número de cuenta.' },
   accountKind: { required: 'Elige el tipo de cuenta.' },
   swiftCode: { pattern: 'El SWIFT/BIC tiene 8 u 11 caracteres.' },
+  bankName: { required: 'Escribe el nombre del banco. Kira lo exige para pagos Wire.' },
+  bankCountry: { required: 'Indica el país del banco.', pattern: 'Usa el código ISO de dos letras, por ejemplo US.' },
+  bankAddressLines: { required: 'Indica al menos calle, ciudad o código postal del banco.' },
   token: { required: 'Elige el token.' },
   network: { required: 'Elige la red.' },
   walletAddress: { required: 'Escribe la dirección de la wallet.' },
@@ -65,6 +86,7 @@ export class NewRecipientPage implements OnInit {
   private readonly injector = inject(Injector);
 
   protected readonly tokens = Object.entries(WALLET_TOKENS).map(([value, spec]) => ({ value, label: spec.label }));
+  protected readonly docTypes = Object.entries(DOC_TYPES).map(([value, label]) => ({ value, label }));
   protected readonly treasuryEnabled = computed(() => dataOf(this.onboarding.status())?.status === 'VERIFIED');
   protected readonly onboardingLoaded = computed(() => this.onboarding.status().status === 'success');
   protected readonly submitted = signal(false);
@@ -85,6 +107,11 @@ export class NewRecipientPage implements OnInit {
     bankName: [''],
     swiftCode: [''],
     bankAddressText: [''],
+    bankStreetName: [''],
+    bankCity: [''],
+    bankState: [''],
+    bankPostalCode: [''],
+    bankCountry: [''],
     token: this.fb.control<WalletToken | ''>(''),
     network: [''],
     walletAddress: [''],
@@ -131,10 +158,21 @@ export class NewRecipientPage implements OnInit {
     this.setRules(c.companyName, company ? [Validators.required] : []);
     this.setRules(c.firstName, company ? [] : [Validators.required]);
     this.setRules(c.lastName, company ? [] : [Validators.required]);
-    this.setRules(c.routingNumber, bank ? [Validators.required, Validators.pattern(ROUTING_NUMBER_PATTERN)] : []);
+    this.setRules(
+      c.routingNumber,
+      bank ? [Validators.required, Validators.pattern(ROUTING_NUMBER_PATTERN), abaChecksumValidator] : [],
+    );
     this.setRules(c.accountNumber, bank ? [Validators.required] : []);
     this.setRules(c.accountKind, bank ? [Validators.required] : []);
     this.setRules(c.swiftCode, rail === 'WIRE' ? [Validators.pattern(SWIFT_PATTERN)] : []);
+    // Kira exige bank_name y bank_address (objeto) en cuentas WIRE; sin ellos rechaza el destinatario.
+    this.setRules(c.bankName, rail === 'WIRE' ? [Validators.required] : []);
+    this.setRules(
+      c.bankCountry,
+      rail === 'WIRE'
+        ? [Validators.required, Validators.pattern(ISO_ALPHA2_PATTERN)]
+        : [Validators.pattern(ISO_ALPHA2_PATTERN)],
+    );
     this.setRules(c.token, rail === 'WALLET' ? [Validators.required] : []);
     this.setRules(c.network, rail === 'WALLET' ? [Validators.required] : []);
     this.setRules(c.walletAddress, rail === 'WALLET' ? [Validators.required] : []);
@@ -157,17 +195,27 @@ export class NewRecipientPage implements OnInit {
     return this.isBank() && isBlankAddress(this.address());
   }
 
-  protected invalid(name: keyof typeof this.form.controls | 'addressLines'): boolean {
+  protected bankAddressLinesMissing(): boolean {
+    return this.rail() === 'WIRE' && isBlankAddress(this.bankAddress());
+  }
+
+  protected invalid(name: keyof typeof this.form.controls | 'addressLines' | 'bankAddressLines'): boolean {
     if (name === 'addressLines') {
       return this.submitted() && this.addressLinesMissing();
+    }
+    if (name === 'bankAddressLines') {
+      return this.submitted() && this.bankAddressLinesMissing();
     }
     const control = this.form.controls[name];
     return (control.invalid && (control.touched || this.submitted())) || !!this.serverError()?.fieldErrors[name];
   }
 
-  protected errorFor(name: keyof typeof this.form.controls | 'addressLines'): string | null {
+  protected errorFor(name: keyof typeof this.form.controls | 'addressLines' | 'bankAddressLines'): string | null {
     if (name === 'addressLines') {
       return this.invalid('addressLines') ? MESSAGES['addressLines']['required'] : null;
+    }
+    if (name === 'bankAddressLines') {
+      return this.invalid('bankAddressLines') ? MESSAGES['bankAddressLines']['required'] : null;
     }
     const server = this.serverError()?.fieldErrors[name];
     if (server) {
@@ -184,7 +232,7 @@ export class NewRecipientPage implements OnInit {
   protected async submit(): Promise<void> {
     this.submitted.set(true);
     this.serverError.set(null);
-    if (this.form.invalid || this.addressLinesMissing()) {
+    if (this.form.invalid || this.addressLinesMissing() || this.bankAddressLinesMissing()) {
       this.form.markAllAsTouched();
       this.focusFirstInvalid();
       return;
@@ -206,6 +254,18 @@ export class NewRecipientPage implements OnInit {
   private address(): PostalAddress {
     const v = this.form.getRawValue();
     return { streetName: v.streetName, city: v.city, state: v.state, postalCode: v.postalCode, country: v.country };
+  }
+
+  /** Dirección del banco (solo WIRE): Kira la exige como objeto, no como texto libre. */
+  private bankAddress(): PostalAddress {
+    const v = this.form.getRawValue();
+    return {
+      streetName: v.bankStreetName,
+      city: v.bankCity,
+      state: v.bankState,
+      postalCode: v.bankPostalCode,
+      country: v.bankCountry,
+    };
   }
 
   private toCommand(): RegisterRecipient {
@@ -236,7 +296,7 @@ export class NewRecipientPage implements OnInit {
             bankName: v.bankName || null,
             swiftCode: v.rail === 'WIRE' ? v.swiftCode || null : null,
             bankAddressText: v.rail === 'ACH' ? v.bankAddressText || null : null,
-            bankAddress: null,
+            bankAddress: v.rail === 'WIRE' ? this.bankAddress() : null,
             address,
           };
     return { holder, destination, docType: v.docType || null, docNumber: v.docNumber || null };

@@ -227,11 +227,18 @@
     <div class="pair">
       <ng-container
         [ngTemplateOutlet]="countryField"
-        [ngTemplateOutletContext]="{ field: 'nationality', label: 'Nacionalidad', optional: true }"
+        [ngTemplateOutletContext]="{
+          field: 'nationality',
+          label: 'Nacionalidad',
+          optional: !requiredByProvider('nationality')
+        }"
       />
       <div class="au-field">
         <label class="au-label" [for]="id + '-birthDate'">
-          Fecha de nacimiento <span class="au-optional">(opcional)</span>
+          Fecha de nacimiento
+          @if (!requiredByProvider('birthDate')) {
+            <span class="au-optional">(opcional)</span>
+          }
         </label>
         <input
           [id]="id + '-birthDate'"
@@ -267,7 +274,10 @@
       </div>
       <div class="au-field">
         <label class="au-label" [for]="id + '-documentNumber'">
-          Número <span class="au-optional">(opcional)</span>
+          Número
+          @if (!requiredByProvider('documentNumber')) {
+            <span class="au-optional">(opcional)</span>
+          }
         </label>
         <input
           [id]="id + '-documentNumber'"

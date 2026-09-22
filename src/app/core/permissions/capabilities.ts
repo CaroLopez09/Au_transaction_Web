@@ -20,16 +20,22 @@ export const CAPABILITY_ROLES = {
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
   /** POST /api/onboarding/refresh, /api/virtual-accounts/{id}/refresh|balance|deposits/sync, /api/payouts/{id}/refresh */
   'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
-  /** POST /api/rfis/sync, /refresh, PATCH items, documentos (subir, borrar y enlace de descarga) */
+  /** POST /api/rfis/sync, /refresh, PATCH items, documentos (subir y enlace de descarga) */
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** DELETE /api/rfis/{id}/items/{itemId}/documents/{documentId}: accion destructiva, solo ADMIN */
+  'rfis.deleteDocuments': ['ADMIN'],
   /** GET /api/events, GET /api/audit */
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  /** GET /api/events/incidents, POST /api/events/{id}/retry */
+  'activity.manageIncidents': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   /** GET /api/operators (Cumplimiento necesita saber quién firma cada operación) */
   'operators.view': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   /** POST /api/operators, DELETE /api/operators/{id} */
   'operators.manage': ['ADMIN'],
   /** GET /api/platform/** (consola multiempresa) */
   'platform.console': ['PLATFORM_OPERATOR'],
+  /** PUT /api/platform/tenants/{id}/settings: parametrización de rieles/tokens por empresa */
+  'platform.manageSettings': ['PLATFORM_OPERATOR'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Capability = keyof typeof CAPABILITY_ROLES;

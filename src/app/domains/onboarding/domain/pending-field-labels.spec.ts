@@ -23,7 +23,12 @@ describe('pendingFieldLabel', () => {
     });
   });
 
-  it('marca lo que el asistente todavía no captura', () => {
-    expect(pendingFieldLabel('transaction_countries').capturable).toBe(false);
+  it('marca como capturables los campos que el asistente puede enviar', () => {
+    expect(pendingFieldLabel('transaction_countries').capturable).toBe(true);
+    expect(pendingFieldLabel('expected_monthly_payments').capturable).toBe(true);
+  });
+
+  it('no ofrece una carga FATCA con un tipo de registro no admitido por Kira', () => {
+    expect(pendingFieldLabel('identifying_information:file_fatca').capturable).toBe(false);
   });
 });

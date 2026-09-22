@@ -15,6 +15,7 @@ import { OnboardingFacade } from '../../onboarding/application/onboarding.facade
 import { RecipientsFacade } from '../../recipients/application/recipients.facade';
 import { isUsableForPayouts } from '../../recipients/domain/recipient';
 import { PayoutPreparationFacade } from '../application/payout-preparation.facade';
+import { CRYPTO_FUNDING_PAIRS, CRYPTO_NETWORK_LABELS } from '../domain/payout';
 import {
   isRedeemable,
   Quotation,
@@ -41,6 +42,9 @@ export class NewPayoutPage implements OnInit {
   private readonly now = tickingClock();
 
   protected readonly railLabels = RAIL_LABELS;
+  protected readonly cryptoNetworkLabels = CRYPTO_NETWORK_LABELS;
+  protected readonly cryptoCurrencies = Object.keys(CRYPTO_FUNDING_PAIRS);
+  protected readonly cryptoNetworksFor = (currency: string): readonly string[] => CRYPTO_FUNDING_PAIRS[currency] ?? [];
   protected readonly onboardingLoaded = computed(() => this.onboarding.status().status === 'success');
   protected readonly treasuryEnabled = computed(() => dataOf(this.onboarding.status())?.status === 'VERIFIED');
 
@@ -67,6 +71,9 @@ export class NewPayoutPage implements OnInit {
     recipientId: ['', Validators.required],
     amount: [null as unknown as number, [Validators.required, Validators.min(0.01)]],
     rail: ['' as QuotationRail | ''],
+    cryptoFunded: [false],
+    cryptoCurrency: [''],
+    cryptoNetwork: [''],
   });
   private readonly recipientId = toSignal(this.form.controls.recipientId.valueChanges, { initialValue: '' });
   protected readonly selectedRecipient = computed(
@@ -76,6 +83,10 @@ export class NewPayoutPage implements OnInit {
     const recipient = this.selectedRecipient();
     return recipient ? railsForRecipient(recipient.rail, recipient.network) : [];
   });
+  private readonly cryptoCurrencySelected = toSignal(this.form.controls.cryptoCurrency.valueChanges, {
+    initialValue: '',
+  });
+  protected readonly cryptoNetworkOptions = computed(() => this.cryptoNetworksFor(this.cryptoCurrencySelected()));
 
   protected readonly submitted = signal(false);
   protected readonly quotation = signal<Quotation | null>(null);
@@ -144,12 +155,15 @@ export class NewPayoutPage implements OnInit {
       return;
     }
     this.createError.set(null);
+    const raw = this.form.getRawValue();
+    const cryptoFunded = raw.cryptoFunded && !!raw.cryptoCurrency && !!raw.cryptoNetwork;
     const result = await this.preparation.create({
       virtualAccountId: quotation.virtualAccountId,
       recipientId: quotation.recipientId,
       amount: quotation.destinationAmount ?? this.form.getRawValue().amount,
       currency: quotation.destinationCurrency,
       quotationId: quotation.id,
+      ...(cryptoFunded ? { cryptoNetwork: raw.cryptoNetwork, cryptoCurrency: raw.cryptoCurrency } : {}),
     });
     if (!result) {
       return;

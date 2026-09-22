@@ -49,6 +49,10 @@ export interface ActivitySection {
   readonly source_of_funds: string;
   readonly expected_monthly_volume: string;
   readonly expected_transaction_count: string;
+  /** Descripción libre adicional que Kira puede exigir para algunos productos. */
+  readonly expected_monthly_payments: string;
+  /** Códigos ISO alfa-3 separados por coma; se proyectan a arreglo para Kira. */
+  readonly transaction_countries: string;
   /** "Yes" | "No" | "" — así lo define el proveedor. */
   readonly high_risk_industries: string;
   readonly is_nbfi_vasp: string;
@@ -104,6 +108,8 @@ export const EMPTY_DRAFT: OnboardingDraft = {
     source_of_funds: '',
     expected_monthly_volume: '',
     expected_transaction_count: '',
+    expected_monthly_payments: '',
+    transaction_countries: '',
     high_risk_industries: '',
     is_nbfi_vasp: '',
     business_legal_history: '',
@@ -288,6 +294,12 @@ export function toProfile(draft: OnboardingDraft): Record<string, unknown> {
   put('source_of_funds', a.source_of_funds);
   put('expected_monthly_volume', a.expected_monthly_volume);
   put('expected_transaction_count', a.expected_transaction_count);
+  put('expected_monthly_payments', a.expected_monthly_payments);
+  const transactionCountries = a.transaction_countries
+    .split(',')
+    .map((country) => country.trim().toUpperCase())
+    .filter((country) => ISO_ALPHA3.test(country));
+  if (transactionCountries.length) profile['transaction_countries'] = [...new Set(transactionCountries)];
   put('high_risk_industries', a.high_risk_industries);
   put('is_nbfi_vasp', a.is_nbfi_vasp);
   put('business_legal_history', a.business_legal_history);

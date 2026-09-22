@@ -131,6 +131,31 @@
   font-size: var(--au-fs-data);
 }
 
+.crypto-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--au-space-3);
+  min-height: 44px;
+  padding: var(--au-space-2) 0;
+  color: var(--au-text-body);
+  cursor: pointer;
+}
+
+.crypto-toggle input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--au-primary);
+}
+
+.crypto-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--au-space-4);
+  margin-top: var(--au-space-3);
+}
+
 @media (max-width: 639px) {
   .breakdown {
     padding: var(--au-space-4);

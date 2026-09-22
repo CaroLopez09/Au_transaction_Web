@@ -126,6 +126,35 @@
       }
     </div>
 
+    <fieldset class="au-field">
+      <label class="crypto-toggle">
+        <input type="checkbox" formControlName="cryptoFunded" />
+        Financiar este pago con un depósito cripto (opcional)
+      </label>
+      <p class="au-help">
+        En vez de descontar el saldo de la cuenta, el proveedor te dará una dirección para depositar
+        USDC o USDT; el pago se envía al destinatario cuando llegue ese depósito.
+      </p>
+      @if (form.controls.cryptoFunded.value) {
+        <div class="crypto-fields">
+          <label class="au-label" for="crypto-currency">Token</label>
+          <select id="crypto-currency" class="au-input" formControlName="cryptoCurrency">
+            <option value="" disabled>Selecciona un token</option>
+            @for (currency of cryptoCurrencies; track currency) {
+              <option [value]="currency">{{ currency }}</option>
+            }
+          </select>
+          <label class="au-label" for="crypto-network">Red</label>
+          <select id="crypto-network" class="au-input" formControlName="cryptoNetwork">
+            <option value="" disabled>Selecciona una red</option>
+            @for (network of cryptoNetworkOptions(); track network) {
+              <option [value]="network">{{ cryptoNetworkLabels[network] }}</option>
+            }
+          </select>
+        </div>
+      }
+    </fieldset>
+
     <div class="actions">
       <a class="au-button au-button--secondary" routerLink="/pagos">Cancelar</a>
       <button

@@ -193,8 +193,19 @@
           </fieldset>
           <div class="pair">
             <div class="au-field">
-              <label class="au-label" for="bankName">Banco <span class="au-optional">(opcional)</span></label>
-              <input id="bankName" class="au-input" formControlName="bankName" />
+              <label class="au-label" for="bankName"
+                >Banco @if (rail() !== 'WIRE') {<span class="au-optional">(opcional)</span>}</label
+              >
+              <input
+                id="bankName"
+                class="au-input"
+                formControlName="bankName"
+                [attr.aria-invalid]="invalid('bankName')"
+                [attr.aria-describedby]="errorFor('bankName') ? 'bankName-error' : null"
+              />
+              @if (errorFor('bankName'); as message) {
+                <p class="au-field-error" id="bankName-error">{{ message }}</p>
+              }
             </div>
             @if (rail() === 'WIRE') {
               <div class="au-field">
@@ -221,7 +232,9 @@
               </div>
             }
           </div>
-        } @else {
+        }
+
+        @if (!isBank()) {
           <div class="pair">
             <div class="au-field">
               <label class="au-label" for="token">Token</label>
@@ -282,7 +295,12 @@
             <label class="au-label" for="docType"
               >Tipo de documento del titular <span class="au-optional">(opcional)</span></label
             >
-            <input id="docType" class="au-input" formControlName="docType" />
+            <select id="docType" class="au-input" formControlName="docType">
+              <option value="">Sin especificar</option>
+              @for (docType of docTypes; track docType.value) {
+                <option [value]="docType.value">{{ docType.label }}</option>
+              }
+            </select>
           </div>
           <div class="au-field">
             <label class="au-label" for="docNumber"
@@ -292,6 +310,64 @@
           </div>
         </div>
       </section>
+
+      @if (rail() === 'WIRE') {
+        <section class="group" aria-labelledby="bank-address-title">
+          <h2 id="bank-address-title">3b. Dirección del banco</h2>
+          <p class="au-help">Kira la exige para pagos Wire: sin ella el proveedor rechaza el destinatario.</p>
+          @if (errorFor('bankAddressLines'); as message) {
+            <p class="au-field-error address-error" role="alert">{{ message }}</p>
+          }
+          <div class="au-field">
+            <label class="au-label" for="bankStreetName">Calle y número</label>
+            <input
+              id="bankStreetName"
+              class="au-input"
+              formControlName="bankStreetName"
+              autocomplete="address-line1"
+              [attr.aria-invalid]="invalid('bankAddressLines')"
+            />
+          </div>
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="bankCity">Ciudad</label>
+              <input id="bankCity" class="au-input" formControlName="bankCity" autocomplete="address-level2" />
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="bankState">Estado o departamento</label>
+              <input id="bankState" class="au-input" formControlName="bankState" autocomplete="address-level1" />
+            </div>
+          </div>
+          <div class="pair">
+            <div class="au-field">
+              <label class="au-label" for="bankPostalCode">Código postal</label>
+              <input
+                id="bankPostalCode"
+                class="au-input"
+                formControlName="bankPostalCode"
+                autocomplete="postal-code"
+              />
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="bankCountry">País</label>
+              <input
+                id="bankCountry"
+                class="au-input code"
+                formControlName="bankCountry"
+                maxlength="2"
+                autocapitalize="characters"
+                autocomplete="country"
+                [attr.aria-invalid]="invalid('bankCountry')"
+                [attr.aria-describedby]="errorFor('bankCountry') ? 'bankCountry-error' : 'bankCountry-help'"
+              />
+              <p class="au-help" id="bankCountry-help">Código ISO de dos letras (US, CO, MX).</p>
+              @if (errorFor('bankCountry'); as message) {
+                <p class="au-field-error" id="bankCountry-error">{{ message }}</p>
+              }
+            </div>
+          </div>
+        </section>
+      }
 
       <section class="group" aria-labelledby="address-title">
         <h2 id="address-title">

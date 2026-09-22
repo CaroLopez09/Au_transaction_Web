@@ -35,6 +35,12 @@ export const routes: Routes = [
     loadComponent: () => import('./core/auth/presentation/sign-in-page').then((m) => m.SignInPage),
   },
   {
+    path: 'verificar-identidad',
+    title: 'Verificar identidad' + TITLE_SUFFIX,
+    canMatch: [guestGuard],
+    loadComponent: () => import('./core/auth/presentation/identity-verification-page').then((m) => m.IdentityVerificationPage),
+  },
+  {
     path: '',
     canMatch: [authenticatedGuard],
     canActivateChild: [audienceGuard],

@@ -202,7 +202,7 @@
                             {{ facade.busy() === 'link:' + document.id ? 'Abriendo…' : 'Abrir' }}
                           </button>
                         }
-                        @if (editable()) {
+                        @if (deletable()) {
                           <button
                             type="button"
                             class="au-button au-button--quiet"

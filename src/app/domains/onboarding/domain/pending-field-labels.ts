@@ -78,11 +78,11 @@ const LABELS: Record<string, string> = {
  * Datos que el proveedor puede pedir y el asistente todavía no captura. Se nombran para que el
  * operador sepa que no es un campo que se le haya pasado por alto (G-28, D3).
  */
-const NOT_CAPTURED = new Set(['transaction_countries', 'expected_monthly_payments', 'physical_address']);
+const NOT_CAPTURED = new Set(['physical_address', 'identifying_information:file_fatca']);
 
 export function pendingFieldLabel(field: string): PendingFieldLabel {
   const exact = LABELS[field];
   const root = field.split(':')[0];
   const label = exact ?? LABELS[root] ?? null;
-  return { field, label, capturable: !NOT_CAPTURED.has(root) };
+  return { field, label, capturable: !NOT_CAPTURED.has(field) && !NOT_CAPTURED.has(root) };
 }

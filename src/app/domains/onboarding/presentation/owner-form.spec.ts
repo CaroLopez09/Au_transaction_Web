@@ -160,6 +160,23 @@ describe('OwnerForm', () => {
     });
   });
 
+  it('hace obligatorios los campos que Kira pide para cada beneficiario', async () => {
+    const { fixture, facade, element } = await render(null);
+    fixture.componentRef.setInput('pending', [
+      'associated_persons:birth_date',
+      'associated_persons:nationality',
+      'associated_persons:document_number',
+    ]);
+    await fixture.whenStable();
+
+    expect(element.textContent).not.toContain('Fecha de nacimiento (opcional)');
+    await fixture.componentInstance.submit();
+    await fixture.whenStable();
+
+    expect(facade.lastCommand).toBeNull();
+    expect(element.querySelector('#fixture-form-birthDate-error')?.textContent).toContain('Revisa este dato.');
+  });
+
   it('pinta junto a cada campo los errores de validación del BFF', async () => {
     const { fixture, facade, element } = await render(fixtureOwner);
     facade.result = {

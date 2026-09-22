@@ -32,6 +32,7 @@ interface EventDto {
   processed: boolean;
   processingError?: string;
   retryCount: number;
+  exhausted: boolean;
   receivedAt?: string;
   processedAt?: string;
 }
@@ -76,21 +77,19 @@ export class ActivityHttpRepository extends ActivityRepository {
   events(limit: number): Observable<readonly ProviderEvent[]> {
     return this.http
       .get<EventDto[]>(`${this.baseUrl}/events`, { params: new HttpParams().set('limit', limit) })
-      .pipe(
-        map((dtos) =>
-          dtos.map((dto) => ({
-            eventId: dto.eventId,
-            eventType: dto.eventType,
-            resourceId: dto.resourceId ?? null,
-            status: dto.status ?? null,
-            processed: dto.processed,
-            processingError: dto.processingError ?? null,
-            retryCount: dto.retryCount,
-            receivedAt: toDate(dto.receivedAt),
-            processedAt: toDate(dto.processedAt),
-          })),
-        ),
-      );
+      .pipe(map((dtos) => dtos.map(toProviderEvent)));
+  }
+
+  incidents(limit: number): Observable<readonly ProviderEvent[]> {
+    return this.http
+      .get<EventDto[]>(`${this.baseUrl}/events/incidents`, { params: new HttpParams().set('limit', limit) })
+      .pipe(map((dtos) => dtos.map(toProviderEvent)));
+  }
+
+  retryEvent(eventId: string): Observable<ProviderEvent> {
+    return this.http
+      .post<EventDto>(`${this.baseUrl}/events/${eventId}/retry`, null)
+      .pipe(map(toProviderEvent));
   }
 
   audit(limit: number): Observable<readonly AuditEntry[]> {
@@ -128,5 +127,20 @@ export function toNotification(dto: NotificationDto): AppNotification {
     resourceId: dto.resourceId ?? null,
     createdAt: toDate(dto.createdAt),
     unread: dto.unread,
+  };
+}
+
+function toProviderEvent(dto: EventDto): ProviderEvent {
+  return {
+    eventId: dto.eventId,
+    eventType: dto.eventType,
+    resourceId: dto.resourceId ?? null,
+    status: dto.status ?? null,
+    processed: dto.processed,
+    processingError: dto.processingError ?? null,
+    retryCount: dto.retryCount,
+    exhausted: dto.exhausted,
+    receivedAt: toDate(dto.receivedAt),
+    processedAt: toDate(dto.processedAt),
   };
 }

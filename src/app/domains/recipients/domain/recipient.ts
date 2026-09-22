@@ -110,6 +110,32 @@ export const ISO_ALPHA2_PATTERN = /^[A-Za-z]{2}$/;
 /** RecipientHolder.MAX_PHONE_LENGTH */
 export const MAX_PHONE_LENGTH = 16;
 
+/**
+ * Valores que Kira acepta en account.doc_type (POST /v1/recipients). Cualquier otro valor
+ * (p. ej. "cc") lo rechaza con un 400 solo despues de intentar guardar el destinatario.
+ */
+export const DOC_TYPES = {
+  id: 'Cédula / identificación nacional',
+  dni: 'DNI',
+  passport: 'Pasaporte',
+  ein: 'EIN (identificación fiscal de empresa, EE. UU.)',
+} as const satisfies Record<string, string>;
+
+export type DocType = keyof typeof DOC_TYPES;
+
+/**
+ * Digito verificador ABA (mod 10, pesos 3-7-1) de un routing number de 9 digitos. Kira lo valida
+ * y rechaza numeros de prueba inventados que no cumplan el checksum, aunque tengan 9 digitos.
+ */
+export function isValidAbaRoutingNumber(value: string): boolean {
+  if (!ROUTING_NUMBER_PATTERN.test(value)) {
+    return false;
+  }
+  const d = value.split('').map(Number);
+  const checksum = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + 1 * (d[2] + d[5] + d[8]);
+  return checksum % 10 === 0;
+}
+
 /** PostalAddress.isBlank del BFF: sin calle, ciudad ni código postal cuenta como vacía. */
 export function isBlankAddress(address: PostalAddress | null): boolean {
   return !address || (!address.streetName?.trim() && !address.city?.trim() && !address.postalCode?.trim());

@@ -29,6 +29,8 @@ export interface ProviderEvent {
   readonly processed: boolean;
   readonly processingError: string | null;
   readonly retryCount: number;
+  /** true cuando el worker automático agotó sus reintentos (WebhookReprojectionWorker.MAX_RETRIES). */
+  readonly exhausted: boolean;
   readonly receivedAt: Date | null;
   readonly processedAt: Date | null;
 }
@@ -54,6 +56,10 @@ export abstract class ActivityRepository {
   abstract markAllRead(): Observable<void>;
   /** GET /api/events (Administración y Cumplimiento) */
   abstract events(limit: number): Observable<readonly ProviderEvent[]>;
+  /** GET /api/events/incidents: solo eventos con al menos un fallo de proyección (panel de incidencias). */
+  abstract incidents(limit: number): Observable<readonly ProviderEvent[]>;
+  /** POST /api/events/{eventId}/retry: reintenta ahora, sin esperar al worker programado. */
+  abstract retryEvent(eventId: string): Observable<ProviderEvent>;
   /** GET /api/audit (Administración y Cumplimiento) */
   abstract audit(limit: number): Observable<readonly AuditEntry[]>;
 }

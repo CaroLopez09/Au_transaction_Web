@@ -83,6 +83,9 @@ export function toPayout(dto: PayoutViewDto): Payout {
     paymentMethod: dto.paymentMethod ?? null,
     errorCode: dto.errorCode ?? null,
     blockedByRfiId: dto.blockedByRfiId ?? null,
+    fundingNetwork: dto.fundingNetwork ?? null,
+    fundingCurrency: dto.fundingCurrency ?? null,
+    depositInstructions: dto.depositInstructions ?? null,
     createdAt: toDate(dto.createdAt),
     updatedAt: toDate(dto.updatedAt),
   };

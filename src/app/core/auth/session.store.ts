@@ -4,13 +4,14 @@ import { Capability, roleCan } from '../permissions/capabilities';
 import { CLOCK } from './clock';
 import { isSessionValid, Session, SessionEndReason } from './session';
 import { SESSION_PERSISTENCE } from './session-persistence';
-import { MfaEnrollment, SessionGrant, SessionRepository } from './session.repository';
+import { IdentityResult, IdentityUpload, MfaEnrollment, SessionGrant, SessionRepository } from './session.repository';
 
 /** Lo que falta tras la contraseña: nada, el código, o configurar el segundo factor. */
 export type SignInStep =
   | { readonly kind: 'done' }
   | { readonly kind: 'mfa-code'; readonly challenge: string }
-  | { readonly kind: 'mfa-setup'; readonly challenge: string };
+  | { readonly kind: 'mfa-setup'; readonly challenge: string }
+  | { readonly kind: 'identity' };
 
 /** Máximo que admite setTimeout (~24,8 días); el JWT del BFF dura 8 h. */
 const MAX_TIMER_MS = 2_147_483_647;
@@ -23,6 +24,7 @@ export class SessionStore {
 
   private readonly state = signal<Session | null>(null);
   private readonly lastEnd = signal<SessionEndReason | null>(null);
+  private readonly identity = signal<{ challenge: string; userId: string } | null>(null);
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly session = this.state.asReadonly();
@@ -30,6 +32,7 @@ export class SessionStore {
   readonly isAuthenticated = computed(() => this.state() !== null);
   readonly operator = computed(() => this.state()?.operator ?? null);
   readonly role = computed(() => this.state()?.operator.role ?? null);
+  readonly identityChallenge = this.identity.asReadonly();
 
   constructor() {
     const stored = this.persistence.read();
@@ -60,6 +63,10 @@ export class SessionStore {
     if (result.kind === 'mfa') {
       return { kind: result.setupRequired ? 'mfa-setup' : 'mfa-code', challenge: result.challenge };
     }
+    if (result.kind === 'identity') {
+      this.identity.set({ challenge: result.challenge, userId: result.userId });
+      return { kind: 'identity' };
+    }
     await this.start(result, startedAt);
     return { kind: 'done' };
   }
@@ -87,6 +94,16 @@ export class SessionStore {
     if (current) {
       this.activate({ ...current, operator: { ...current.operator, mfaEnabled: false } });
     }
+  }
+
+  async completeIdentity(upload: IdentityUpload): Promise<IdentityResult> {
+    const challenge = this.identityChallenge();
+    if (!challenge) {
+      throw new Error('El reto de identidad expiró. Ingresa nuevamente.');
+    }
+    const result = await firstValueFrom(this.repository.verifyIdentity(challenge.challenge, challenge.userId, upload));
+    this.identity.set(null);
+    return result;
   }
 
   private async start(grant: SessionGrant, startedAt: number): Promise<void> {

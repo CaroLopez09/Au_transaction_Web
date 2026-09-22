@@ -10,6 +10,7 @@ interface CapabilitiesDto {
   bank?: string;
   providerApiVersion?: string;
   dualApprovalThreshold?: number;
+  supportEmail?: string;
 }
 
 /** Lo que este entorno permite, según el BFF. */
@@ -22,6 +23,8 @@ export interface EnvironmentInfo {
   readonly providerApiVersion: string | null;
   /** Desde este importe un pago necesita dos firmas; nulo si la empresa no tiene umbral. */
   readonly dualApprovalThreshold: number | null;
+  /** Correo de soporte/operaciones para escalar una incidencia; nulo si no está configurado (bff.support.email). */
+  readonly supportEmail: string | null;
 }
 
 /**
@@ -41,6 +44,7 @@ export class EnvironmentCapabilities {
     bank: null,
     providerApiVersion: null,
     dualApprovalThreshold: null,
+    supportEmail: null,
   });
 
   readonly info = this.state.asReadonly();
@@ -54,6 +58,7 @@ export class EnvironmentCapabilities {
         bank: dto.bank ?? null,
         providerApiVersion: dto.providerApiVersion ?? null,
         dualApprovalThreshold: dto.dualApprovalThreshold ?? null,
+        supportEmail: dto.supportEmail ?? null,
       });
     } catch {
       // Sin respuesta se conserva lo prudente: la pantalla que las use ya muestra su propio error.

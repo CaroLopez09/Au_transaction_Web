@@ -59,6 +59,29 @@ import { StepGaps } from './step-gaps';
             </select>
           </div>
         </div>
+        <div class="pair">
+          <div class="au-field">
+            <label class="au-label" for="expected_monthly_payments">Pagos mensuales esperados</label>
+            <input
+              id="expected_monthly_payments"
+              class="au-input"
+              formControlName="expected_monthly_payments"
+              autocomplete="off"
+            />
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="transaction_countries">Países con los que opera</label>
+            <input
+              id="transaction_countries"
+              class="au-input"
+              formControlName="transaction_countries"
+              autocomplete="off"
+              placeholder="COL, USA, MEX"
+              aria-describedby="transaction-countries-help"
+            />
+            <p class="au-help" id="transaction-countries-help">Códigos ISO de tres letras, separados por coma.</p>
+          </div>
+        </div>
       </fieldset>
 
       <fieldset class="group">
@@ -119,6 +142,8 @@ export class ActivityStep {
     source_of_funds: [''],
     expected_monthly_volume: [''],
     expected_transaction_count: [''],
+    expected_monthly_payments: [''],
+    transaction_countries: [''],
     high_risk_industries: [''],
     is_nbfi_vasp: [''],
     business_legal_history: [''],

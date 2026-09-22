@@ -28,6 +28,27 @@ export interface ReviewItem {
   readonly since: Date | null;
 }
 
+/** Usuario existente en Kira Sandbox, visible solo en la consola de operaciones. */
+export interface KiraSandboxUser {
+  readonly id: string;
+  readonly name: string | null;
+  readonly email: string | null;
+  readonly status: string | null;
+  readonly externalId: string | null;
+}
+
+export interface SandboxTenantImport {
+  readonly kiraUserId: string;
+  readonly name: string;
+  readonly taxId: string | null;
+  readonly administrator: {
+    readonly email: string;
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly password: string;
+  };
+}
+
 /** Ficha 360: se muestra tal cual la da el BFF, en solo lectura. */
 export interface Tenant360 {
   readonly summary: TenantSummary;
@@ -81,9 +102,29 @@ export interface Tenant360 {
   }[];
 }
 
+/** Parametrizacion del portal (arquitectura §8): rieles/tokens/modulos habilitados para la empresa. */
+export interface TenantSettingsView {
+  readonly tenantId: string;
+  readonly enabledRails: readonly string[];
+  readonly enabledTokens: readonly string[];
+  readonly enabledFeatures: readonly string[];
+  readonly availableRails: readonly string[];
+  readonly availableTokens: readonly string[];
+  readonly availableFeatures: readonly string[];
+}
+
 export abstract class PlatformRepository {
   abstract tenants(): Observable<readonly TenantSummary[]>;
+  abstract sandboxUsers(): Observable<readonly KiraSandboxUser[]>;
+  abstract importSandboxTenant(command: SandboxTenantImport): Observable<void>;
   abstract tenant(id: string): Observable<Tenant360>;
   abstract refresh(id: string): Observable<Tenant360>;
   abstract reviewQueue(): Observable<readonly ReviewItem[]>;
+  abstract settings(tenantId: string): Observable<TenantSettingsView>;
+  abstract updateSettings(
+    tenantId: string,
+    enabledRails: readonly string[],
+    enabledTokens: readonly string[],
+    enabledFeatures: readonly string[],
+  ): Observable<TenantSettingsView>;
 }

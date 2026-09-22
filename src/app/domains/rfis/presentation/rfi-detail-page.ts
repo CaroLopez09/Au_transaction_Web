@@ -53,7 +53,9 @@ export class RfiDetailPage implements OnInit {
   protected readonly rfi = computed(() => dataOf(this.facade.detail()));
   protected readonly loadError = computed(() => errorOf(this.facade.detail()));
   protected readonly canManage = computed(() => this.session.can('rfis.manage'));
+  protected readonly canDeleteDocuments = computed(() => this.session.can('rfis.deleteDocuments'));
   protected readonly editable = computed(() => this.canManage() && (this.rfi()?.open ?? false));
+  protected readonly deletable = computed(() => this.canDeleteDocuments() && (this.rfi()?.open ?? false));
   protected readonly status = computed(() => {
     const rfi = this.rfi();
     return rfi ? rfiStatusCopy(rfi) : null;

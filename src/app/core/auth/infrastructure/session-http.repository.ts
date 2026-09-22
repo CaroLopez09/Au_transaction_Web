@@ -3,7 +3,14 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../configuration/app-config';
 import { Operator } from '../session';
-import { MfaEnrollment, SessionGrant, SessionRepository, SignInResult } from '../session.repository';
+import {
+  IdentityResult,
+  IdentityUpload,
+  MfaEnrollment,
+  SessionGrant,
+  SessionRepository,
+  SignInResult,
+} from '../session.repository';
 import { LoginResultDto, MeDto, MfaSetupDto } from './session.dto';
 import { toOperator, toSessionGrant, toSignInResult } from './session.mapper';
 
@@ -14,6 +21,19 @@ export class SessionHttpRepository extends SessionRepository {
 
   signIn(email: string, password: string): Observable<SignInResult> {
     return this.http.post<LoginResultDto>(`${this.baseUrl}/auth/login`, { email, password }).pipe(map(toSignInResult));
+  }
+
+  verifyIdentity(challenge: string, userId: string, upload: IdentityUpload): Observable<IdentityResult> {
+    const form = new FormData();
+    form.append('documentFrontImage', upload.documentFrontImage);
+    form.append('documentBackImage', upload.documentBackImage);
+    form.append('selfieImage', upload.selfieImage);
+    form.append('documentType', upload.documentType);
+    form.append('countryCode', upload.countryCode);
+    form.append('biometricConsent', String(upload.biometricConsent));
+    return this.http.post<IdentityResult>(`${this.baseUrl}/operators/${encodeURIComponent(userId)}/verify-identity`, form, {
+      headers: new HttpHeaders({ Authorization: `Bearer ${challenge}` }),
+    });
   }
 
   verifyMfa(challenge: string, code: string): Observable<SessionGrant> {

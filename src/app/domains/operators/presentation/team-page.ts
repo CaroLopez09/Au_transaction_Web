@@ -71,6 +71,23 @@ export class TeamPage implements OnInit {
     return role ? roleLabel(role) : (fallback ?? 'Rol no reconocido');
   }
 
+  protected identityLabel(status: string): string {
+    return {
+      PENDING_DOCUMENTS: 'Documentos pendientes',
+      PENDING_LIVENESS: 'Rostro pendiente',
+      IN_REVIEW: 'En revisión',
+      VERIFIED: 'Verificada',
+      REJECTED: 'No aprobada',
+      EXPIRED: 'Verificación vencida',
+    }[status] ?? 'En validación';
+  }
+
+  protected identityTone(status: string): 'success' | 'attention' | 'critical' | 'neutral' {
+    if (status === 'VERIFIED') return 'success';
+    if (status === 'REJECTED') return 'critical';
+    return status === 'EXPIRED' ? 'neutral' : 'attention';
+  }
+
   protected startCreating(): void {
     this.form.reset({ firstName: '', lastName: '', email: '', password: '', role: 'TREASURY_MAKER' });
     this.createError.set(null);
@@ -99,7 +116,7 @@ export class TeamPage implements OnInit {
     }
     this.drawerOpen.set(false);
     // La contraseña no vuelve a mostrarse: quien la creó se la entrega a la persona.
-    this.notice.set(`${result.value.fullName} ya puede ingresar con ${result.value.email}.`);
+    this.notice.set(`${result.value.fullName} quedó pendiente de validación de identidad.`);
     await this.load();
   }
 

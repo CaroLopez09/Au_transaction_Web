@@ -27,6 +27,7 @@ describe('toOperator', () => {
       status: 'ACTIVE',
       active: true,
       mfaEnabled: false,
+      identityStatus: 'PENDING_DOCUMENTS',
     });
   });
 

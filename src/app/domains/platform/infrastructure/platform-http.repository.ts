@@ -3,17 +3,34 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { APP_CONFIG } from '../../../core/configuration/app-config';
 import { toDate } from '../../../shared/utilities/dates';
-import { PlatformRepository, ReviewItem, Tenant360, TenantSummary } from '../domain/platform';
+import {
+  KiraSandboxUser,
+  PlatformRepository,
+  ReviewItem,
+  SandboxTenantImport,
+  Tenant360,
+  TenantSettingsView,
+  TenantSummary,
+} from '../domain/platform';
 
 type Dto = Record<string, unknown>;
 
 @Injectable()
 export class PlatformHttpRepository extends PlatformRepository {
   private readonly http = inject(HttpClient);
-  private readonly url = `${inject(APP_CONFIG).apiBaseUrl}/platform`;
+  private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
+  private readonly url = `${this.apiBaseUrl}/platform`;
 
   tenants(): Observable<readonly TenantSummary[]> {
     return this.http.get<Dto[]>(`${this.url}/tenants`).pipe(map((dtos) => dtos.map(toSummary)));
+  }
+
+  sandboxUsers(): Observable<readonly KiraSandboxUser[]> {
+    return this.http.get<Dto[]>(`${this.url}/kira-sandbox-users`).pipe(map((dtos) => dtos.map(toSandboxUser)));
+  }
+
+  importSandboxTenant(command: SandboxTenantImport): Observable<void> {
+    return this.http.post<void>(`${this.apiBaseUrl}/tenants/import-sandbox`, command);
   }
 
   tenant(id: string): Observable<Tenant360> {
@@ -40,6 +57,27 @@ export class PlatformHttpRepository extends PlatformRepository {
         })),
       ),
     );
+  }
+
+  settings(tenantId: string): Observable<TenantSettingsView> {
+    return this.http
+      .get<Dto>(`${this.url}/tenants/${encodeURIComponent(tenantId)}/settings`)
+      .pipe(map(toSettings));
+  }
+
+  updateSettings(
+    tenantId: string,
+    enabledRails: readonly string[],
+    enabledTokens: readonly string[],
+    enabledFeatures: readonly string[],
+  ): Observable<TenantSettingsView> {
+    return this.http
+      .put<Dto>(`${this.url}/tenants/${encodeURIComponent(tenantId)}/settings`, {
+        enabledRails,
+        enabledTokens,
+        enabledFeatures,
+      })
+      .pipe(map(toSettings));
   }
 }
 
@@ -71,6 +109,30 @@ export function toSummary(d: Dto): TenantSummary {
     overdueRfis: num(d['overdueRfis']) ?? 0,
     heldPayouts: num(d['heldPayouts']) ?? 0,
     createdAt: toDate(str(d['createdAt']) ?? undefined),
+  };
+}
+
+export function toSandboxUser(d: Dto): KiraSandboxUser {
+  return {
+    id: str(d['id']) ?? '',
+    name: str(d['name']),
+    email: str(d['email']),
+    status: str(d['status']),
+    externalId: str(d['externalId']),
+  };
+}
+
+export function toSettings(d: Dto): TenantSettingsView {
+  const strings = (value: unknown): readonly string[] =>
+    Array.isArray(value) ? (value as unknown[]).filter((v): v is string => typeof v === 'string') : [];
+  return {
+    tenantId: str(d['tenantId']) ?? '',
+    enabledRails: strings(d['enabledRails']),
+    enabledTokens: strings(d['enabledTokens']),
+    enabledFeatures: strings(d['enabledFeatures']),
+    availableRails: strings(d['availableRails']),
+    availableTokens: strings(d['availableTokens']),
+    availableFeatures: strings(d['availableFeatures']),
   };
 }
 

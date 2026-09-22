@@ -80,6 +80,51 @@ describe('borrador de vinculación', () => {
     expect('international_entity_type' in profile).toBe(false);
   });
 
+  it('proyecta pagos y países de operación en la forma que acepta el proveedor', () => {
+    const profile = toProfile({
+      ...fixtureDraft(),
+      activity: {
+        ...fixtureDraft().activity,
+        expected_monthly_payments: '12 pagos ACH al mes',
+        transaction_countries: 'col, USA, COL, mx',
+      },
+    });
+
+    expect(profile['expected_monthly_payments']).toBe('12 pagos ACH al mes');
+    expect(profile['transaction_countries']).toEqual(['COL', 'USA']);
+  });
+
+  it('proyecta toda la actividad y riesgo con las formas que recibe Kira', () => {
+    const draft = fixtureDraft();
+    const profile = toProfile({
+      ...draft,
+      activity: {
+        ...draft.activity,
+        account_purpose: 'operating_a_company',
+        expected_monthly_volume: '100000_to_500000',
+        expected_transaction_count: '51_to_100',
+        high_risk_industries: 'Yes',
+        is_nbfi_vasp: 'No',
+        business_legal_history: 'No',
+        pep_status: 'true',
+        has_us_bank_account: 'Yes',
+        has_denied_bank_account: 'No',
+      },
+    });
+
+    expect(profile).toMatchObject({
+      account_purpose: 'operating_a_company',
+      source_of_funds: 'sales_of_goods_and_services',
+      expected_monthly_volume: '100000_to_500000',
+      expected_transaction_count: '51_to_100',
+      high_risk_industries: 'Yes',
+      is_nbfi_vasp: 'No',
+      business_legal_history: 'No',
+      pep_status: true,
+      additional_info: { has_us_bank_account: 'Yes', has_denied_bank_account: 'No' },
+    });
+  });
+
   it('lee borradores viejos, parciales o con basura sin romper', () => {
     const draft = normalizeDraft({
       company: { business_legal_name: 'X', desconocido: 'y', phone: 123 },

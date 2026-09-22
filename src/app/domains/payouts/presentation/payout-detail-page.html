@@ -77,6 +77,51 @@
         <p class="explanation">{{ current.status.explanation }}</p>
       }
 
+      @if (depositInstructions(); as deposit) {
+        <div class="au-panel" role="note" aria-labelledby="deposit-title">
+          <h3 id="deposit-title">Depósito para financiar este pago</h3>
+          <p>
+            Este pago se financia con un depósito cripto en vez del saldo de la cuenta. No se envía nada al
+            destinatario hasta que el depósito llegue.
+          </p>
+          <dl class="au-dl">
+            @if (deposit.currency || current.payout.fundingCurrency) {
+              <div>
+                <dt>Token</dt>
+                <dd>{{ deposit.currency ?? current.payout.fundingCurrency }}</dd>
+              </div>
+            }
+            @if (deposit.network || current.payout.fundingNetwork) {
+              <div>
+                <dt>Red</dt>
+                <dd>{{ deposit.network ?? current.payout.fundingNetwork }}</dd>
+              </div>
+            }
+            @if (deposit.expiresAt) {
+              <div>
+                <dt>Vence</dt>
+                <dd>{{ deposit.expiresAt }}</dd>
+              </div>
+            }
+          </dl>
+          @if (deposit.address) {
+            <div class="deposit-address">
+              <code>{{ deposit.address }}</code>
+              <button type="button" class="au-button au-button--secondary" (click)="copyAddress(deposit.address)">
+                Copiar dirección
+              </button>
+            </div>
+            @if (depositQr(); as qr) {
+              <img [src]="qr" alt="Código QR de la dirección de depósito" width="160" height="160" />
+            }
+          } @else {
+            <p class="au-help">
+              El proveedor todavía no informa una dirección de depósito para este pago.
+            </p>
+          }
+        </div>
+      }
+
       <dl class="amounts">
         <div>
           <dt>Recibe el destinatario</dt>

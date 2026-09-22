@@ -17,6 +17,7 @@ interface OperatorViewDto {
   status: string;
   active: boolean;
   mfaEnabled: boolean;
+  identityStatus?: string;
 }
 
 @Injectable()
@@ -50,5 +51,6 @@ export function toOperator(dto: OperatorViewDto): Operator {
     status: dto.status,
     active: dto.active,
     mfaEnabled: dto.mfaEnabled,
+    identityStatus: dto.identityStatus ?? 'PENDING_DOCUMENTS',
   };
 }

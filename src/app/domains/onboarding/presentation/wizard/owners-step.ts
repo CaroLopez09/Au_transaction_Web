@@ -111,6 +111,7 @@ import { StepGaps } from './step-gaps';
         <au-owner-form
           formId="wizard-owner-form"
           [owner]="current.owner"
+          [pending]="pending()"
           (saved)="onSaved($event, current.owner !== null)"
         />
         <div drawerFooter class="drawer-actions">

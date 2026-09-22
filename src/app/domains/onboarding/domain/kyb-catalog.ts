@@ -234,6 +234,13 @@ export const COMPANY_RECORDS: readonly CompanyRecord[] = [
     hasNumber: false,
   },
   {
+    informationType: 'board_minutes',
+    fileRole: 'file_board_minutes',
+    label: 'Acta de junta',
+    help: 'El acta de la junta que autoriza abrir la cuenta.',
+    hasNumber: false,
+  },
+  {
     informationType: 'portfolio_statement',
     fileRole: 'file_portfolio_statement',
     label: 'Extracto de portafolio',

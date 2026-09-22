@@ -58,6 +58,9 @@ export interface PayoutViewDto {
   paymentMethod?: string;
   errorCode?: string;
   blockedByRfiId?: string;
+  fundingNetwork?: string;
+  fundingCurrency?: string;
+  depositInstructions?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -105,6 +108,8 @@ export interface CreatePayoutDto {
   amount: number;
   currency: string;
   quotationId: string;
+  cryptoNetwork?: string | null;
+  cryptoCurrency?: string | null;
 }
 
 /** application/treasury/PayoutCommands.ApprovePayout */

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { toDataURL } from 'qrcode';
 import { SessionStore } from '../../../core/auth/session.store';
 import { UserFacingError } from '../../../core/http/error-mapping';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
@@ -85,7 +86,7 @@ export class PayoutDetailPage implements OnInit {
     return {
       payout,
       approval: approvalCopy(payout.approvalState),
-      status: statusCopy(payout.status),
+      status: statusCopy(payout.status, payout.fundingNetwork),
       submitted: payout.approvalState === 'SUBMITTED',
       canRefresh: payout.approvalState === 'SUBMITTED' && this.session.can('provider.refresh'),
       isMine: payout.makerUserId === this.session.operator()?.userId,
@@ -136,6 +137,51 @@ export class PayoutDetailPage implements OnInit {
     const account = this.view()?.account;
     return account ? accountLabel(account) : 'Cuenta no disponible';
   });
+
+  /**
+   * G-19: 'deposit_instructions' del proveedor es additionalProperties libre (sin contrato fijo
+   * de claves), así que se interpreta de forma tolerante en vez de tipar cada campo.
+   */
+  protected readonly depositInstructions = computed(() => {
+    const raw = this.payout()?.depositInstructions;
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const address = firstString(parsed, ['address', 'deposit_address', 'wallet_address']);
+      const network = firstString(parsed, ['network', 'chain']);
+      const currency = firstString(parsed, ['currency', 'token']);
+      const expiresAt = firstString(parsed, ['expires_at', 'expiration', 'valid_until']);
+      return { address, network, currency, expiresAt, raw: parsed };
+    } catch {
+      return null;
+    }
+  });
+
+  protected readonly depositQr = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const address = this.depositInstructions()?.address ?? null;
+      if (!address) {
+        this.depositQr.set(null);
+        return;
+      }
+      toDataURL(address, { margin: 1, width: 200, errorCorrectionLevel: 'M' })
+        .then((image) => this.depositQr.set(image))
+        .catch(() => this.depositQr.set(null));
+    });
+  }
+
+  protected async copyAddress(address: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(address);
+      this.notice.set('Dirección copiada al portapapeles.');
+    } catch {
+      // Sin permiso de portapapeles la dirección sigue visible en pantalla para copiarla a mano.
+    }
+  }
 
   protected readonly actionError = signal<UserFacingError | null>(null);
   protected readonly notice = signal<string | null>(null);
@@ -287,4 +333,14 @@ function readAsDataUri(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+function firstString(source: Record<string, unknown>, keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return null;
 }

@@ -40,6 +40,7 @@
                 <th scope="col">Persona</th>
                 <th scope="col">Rol</th>
                 <th scope="col">Segundo factor</th>
+                <th scope="col">Identidad</th>
                 <th scope="col">Estado</th>
                 @if (canManage()) {
                   <th scope="col"><span class="au-visually-hidden">Acciones</span></th>
@@ -55,6 +56,13 @@
                   </td>
                   <td>{{ label(operator.role, operator.roleDescription) }}</td>
                   <td>{{ operator.mfaEnabled ? 'Activo' : 'Sin configurar' }}</td>
+                  <td>
+                    <au-status-badge
+                      [label]="identityLabel(operator.identityStatus)"
+                      [tone]="identityTone(operator.identityStatus)"
+                      [technicalValue]="operator.identityStatus"
+                    />
+                  </td>
                   <td>
                     <au-status-badge
                       [label]="operator.active ? 'Activa' : 'Desactivada'"
@@ -137,7 +145,7 @@
           autocomplete="new-password"
         />
         <p class="au-help">
-          Mínimo {{ minPassword }} caracteres. Se la entregas tú a la persona: el portal no vuelve a mostrarla.
+          Mínimo {{ minPassword }} caracteres. La persona podrá ingresar cuando complete la validación de identidad.
         </p>
         @if (invalid('password')) {
           <p class="au-field-error" role="alert">Usa al menos {{ minPassword }} caracteres.</p>

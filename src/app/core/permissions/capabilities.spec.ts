@@ -11,10 +11,13 @@ const EXPECTED: Record<Capability, readonly Role[]> = {
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
   'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
   'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'rfis.deleteDocuments': ['ADMIN'],
   'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'activity.manageIncidents': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   'operators.view': ['ADMIN', 'COMPLIANCE_INTERNAL'],
   'operators.manage': ['ADMIN'],
   'platform.console': ['PLATFORM_OPERATOR'],
+  'platform.manageSettings': ['PLATFORM_OPERATOR'],
 };
 
 describe('roleCan', () => {

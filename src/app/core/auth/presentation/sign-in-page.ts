@@ -82,10 +82,12 @@ export class SignInPage {
       } else if (step.kind === 'mfa-code') {
         this.stage.set({ kind: 'code', challenge: step.challenge });
         queueMicrotask(() => document.getElementById('mfa-code')?.focus());
-      } else {
+      } else if (step.kind === 'mfa-setup') {
         this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment: null });
         const enrollment = await this.session.beginMfaSetup(step.challenge);
         this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment });
+      } else {
+        await this.router.navigate(['/verificar-identidad']);
       }
     } catch (error) {
       this.fail(error);

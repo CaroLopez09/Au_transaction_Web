@@ -26,6 +26,7 @@ describe('EnvironmentCapabilities', () => {
       bank: 'jp_morgan',
       providerApiVersion: '2026-06-01',
       dualApprovalThreshold: 5000,
+      supportEmail: 'soporte@juriscop.test',
     });
     await loaded;
 
@@ -35,6 +36,7 @@ describe('EnvironmentCapabilities', () => {
       bank: 'jp_morgan',
       providerApiVersion: '2026-06-01',
       dualApprovalThreshold: 5000,
+      supportEmail: 'soporte@juriscop.test',
     });
   });
 

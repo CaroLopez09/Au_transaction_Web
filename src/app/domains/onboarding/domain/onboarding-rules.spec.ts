@@ -124,4 +124,14 @@ describe('documentos de empresa según el país de constitución', () => {
     expect(ein('col')).toBe(false);
     expect(ein('MEX')).toBe(false);
   });
+
+  it('ofrece el acta de junta con los identificadores que exige Kira', () => {
+    const boardMinutes = companyRecordsFor('COL').find((record) => record.informationType === 'board_minutes');
+
+    expect(boardMinutes).toMatchObject({
+      informationType: 'board_minutes',
+      fileRole: 'file_board_minutes',
+    });
+  });
+
 });

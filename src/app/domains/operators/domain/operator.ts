@@ -15,6 +15,8 @@ export interface Operator {
   readonly active: boolean;
   /** Segundo factor ya configurado por esa persona. El portal no puede activarlo por ella. */
   readonly mfaEnabled: boolean;
+  /** Estado de validacion documental y facial, resuelto por el BFF. */
+  readonly identityStatus: string;
 }
 
 /**
