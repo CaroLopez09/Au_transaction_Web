@@ -37,7 +37,7 @@ test.describe('Tesorería con fixtures de contrato', () => {
       'GET /api/payouts/p-fixture-1': fixturePayout(),
       'GET /api/quotations/q-fixture-1': fixtureQuotation(),
     });
-    await signIn(page, 'treasury.maker@juriscop.test', '/pagos/nuevo');
+    await signIn(page, 'admin@juriscop.test', '/pagos/nuevo');
     await expect(page.getByRole('heading', { name: 'Nuevo pago', level: 1 })).toBeVisible();
 
     await page.getByRole('button', { name: 'Cotizar' }).click();
@@ -74,7 +74,7 @@ test.describe('Tesorería con fixtures de contrato', () => {
       ...base,
       'POST /api/quotations': respond(201, fixtureQuotation({ secondsToExpiry: 0, status: 'EXPIRED' })),
     });
-    await signIn(page, 'treasury.maker@juriscop.test', '/pagos/nuevo');
+    await signIn(page, 'admin@juriscop.test', '/pagos/nuevo');
     await page.getByLabel('Cuenta de origen').selectOption(fixtureAccount.id);
     await page.getByLabel('Destinatario', { exact: true }).selectOption(fixtureRecipient.id);
     await page.getByLabel('Importe que recibe el destinatario').fill('1000');
@@ -180,7 +180,7 @@ test.describe('Tesorería con fixtures de contrato', () => {
 
   test('registrar destinatario valida por riel y no ofrece redes inválidas para el token', async ({ page }) => {
     const writes = await useContractFixtures(page, base);
-    await signIn(page, 'treasury.maker@juriscop.test', '/destinatarios/nuevo');
+    await signIn(page, 'admin@juriscop.test', '/destinatarios/nuevo');
     await page.getByRole('radio', { name: /^ACH/ }).check();
     await page.getByRole('button', { name: 'Registrar destinatario' }).click();
     await expect(page.getByText('Escribe la razón social.')).toBeVisible();
@@ -211,7 +211,7 @@ test.describe('Tesorería con fixtures de contrato', () => {
         });
       },
     });
-    await signIn(page, 'compliance.internal@juriscop.test', '/solicitudes/rfi-fixture-1');
+    await signIn(page, 'admin@juriscop.test', '/solicitudes/rfi-fixture-1');
     await expect(page.getByText('Te toca responder')).toBeVisible();
     await expect(page.getByText('Detiene un pago')).toBeVisible();
     await page.getByRole('textbox', { name: 'EIN de la empresa' }).fill('123');
@@ -234,10 +234,10 @@ test.describe('Tesorería con fixtures de contrato', () => {
     await expect(page.getByText('Invalid EIN format')).toBeVisible();
   });
 
-  test('un rol de consulta ve la solicitud sin controles de respuesta', async ({ page }) => {
+  test('un rol que solo aprueba pagos ve la solicitud sin controles de respuesta', async ({ page }) => {
     await useContractFixtures(page, { ...base, 'GET /api/rfis/rfi-fixture-1': fixtureRfi });
-    await signIn(page, 'read.only@juriscop.test', '/solicitudes/rfi-fixture-1');
-    await expect(page.getByText('Responde una persona con rol de Cumplimiento o Administración.')).toBeVisible();
+    await signIn(page, 'treasury.approver@juriscop.test', '/solicitudes/rfi-fixture-1');
+    await expect(page.getByText('Responde una persona con rol de Administración.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enviar respuestas' })).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'EIN de la empresa' })).toBeDisabled();
   });

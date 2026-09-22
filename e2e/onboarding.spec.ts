@@ -34,14 +34,14 @@ test.describe('Inicio y Vinculación con datos reales del BFF', () => {
   });
 
   test('cada sesión ve solo su organización y los textos se adaptan al rol', async ({ page }) => {
-    await signIn(page, SEED_OPERATORS.bankvisionReadOnly);
+    await signIn(page, SEED_OPERATORS.bankvisionApprover);
     await expect(page).toHaveURL(/\/$/);
     const onboarding = await fetchOnboarding(page);
     expect(onboarding.name).not.toBe('Juriscop');
     await expect(page.getByRole('heading', { level: 1, name: onboarding.name })).toBeVisible();
-    await expect(page.getByText('Ingresaste con el rol Consulta.')).toBeVisible();
+    await expect(page.getByText('Ingresaste con el rol Tesorería · aprobación.')).toBeVisible();
     if (!onboarding.kiraUserId) {
-      await expect(page.getByText('Lo gestiona una persona con rol de Administración o Cumplimiento.')).toBeVisible();
+      await expect(page.getByText('Lo gestiona una persona con rol de Administración.')).toBeVisible();
     }
   });
 

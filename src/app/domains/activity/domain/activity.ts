@@ -54,13 +54,13 @@ export abstract class ActivityRepository {
   abstract unreadCount(): Observable<number>;
   /** POST /api/notifications/read */
   abstract markAllRead(): Observable<void>;
-  /** GET /api/events (Administración y Cumplimiento) */
+  /** GET /api/events (Administración) */
   abstract events(limit: number): Observable<readonly ProviderEvent[]>;
   /** GET /api/events/incidents: solo eventos con al menos un fallo de proyección (panel de incidencias). */
   abstract incidents(limit: number): Observable<readonly ProviderEvent[]>;
   /** POST /api/events/{eventId}/retry: reintenta ahora, sin esperar al worker programado. */
   abstract retryEvent(eventId: string): Observable<ProviderEvent>;
-  /** GET /api/audit (Administración y Cumplimiento) */
+  /** GET /api/audit (Administración) */
   abstract audit(limit: number): Observable<readonly AuditEntry[]>;
 }
 

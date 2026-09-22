@@ -22,7 +22,7 @@ export function stageCopy(
   canManage: boolean,
 ): StageCopy {
   const companyName = status.companyName;
-  const whoActs = canManage ? '' : ' Lo gestiona una persona con rol de Administración o Cumplimiento.';
+  const whoActs = canManage ? '' : ' Lo gestiona una persona con rol de Administración.';
 
   switch (stage) {
     case 'not-started':

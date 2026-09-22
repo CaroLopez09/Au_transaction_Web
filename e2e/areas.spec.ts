@@ -61,7 +61,7 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
   test('sin vinculación aprobada, preparar pagos y registrar destinatarios muestran por qué no se puede', async ({
     page,
   }) => {
-    await signIn(page, 'treasury.maker@juriscop.test', '/pagos/nuevo');
+    await signIn(page, 'admin@juriscop.test', '/pagos/nuevo');
     await expect(page).toHaveURL(/\/pagos\/nuevo$/);
     const onboarding = await fetchOnboarding(page);
     test.skip(onboarding.status === 'VERIFIED', 'La organización ya está verificada: el bloqueo no aplica.');
@@ -73,10 +73,10 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
     await expect(page.getByRole('radio', { name: /^ACH/ })).toHaveCount(0);
   });
 
-  test('un rol de consulta no ve acciones de escritura y no puede entrar por URL a las pantallas de alta', async ({
+  test('un rol que solo aprueba pagos no ve acciones de escritura y no puede entrar por URL a las pantallas de alta', async ({
     page,
   }) => {
-    await signIn(page, 'read.only@juriscop.test', '/pagos');
+    await signIn(page, 'treasury.approver@juriscop.test', '/pagos');
     await expect(page.getByRole('heading', { level: 1, name: 'Pagos' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Nuevo pago' })).toHaveCount(0);
 
@@ -86,17 +86,9 @@ test.describe('Áreas de tesorería y cumplimiento con el BFF real', () => {
     await expect(page).toHaveURL('/');
     await page.goto('/destinatarios');
     await expect(page.getByRole('link', { name: 'Registrar destinatario' })).toHaveCount(0);
-    // El equipo es de Administración y Cumplimiento: Consulta ni siquiera lo ve por URL.
+    // El equipo es solo de Administración: quien solo aprueba pagos ni siquiera lo ve por URL.
     await page.goto('/equipo');
     await expect(page).toHaveURL('/');
-  });
-
-  test('Cumplimiento ve el equipo pero no puede dar de alta ni desactivar', async ({ page }) => {
-    await signIn(page, 'compliance.internal@juriscop.test', '/equipo');
-    await expect(page.getByRole('heading', { level: 1, name: 'Equipo' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'admin@juriscop.test', exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Añadir persona' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Desactivar' })).toHaveCount(0);
   });
 
   test('un recurso de otra organización o inexistente muestra el mensaje del BFF, no una pantalla rota', async ({

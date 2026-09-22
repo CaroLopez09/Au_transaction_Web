@@ -46,7 +46,7 @@ las listas de tesorería vuelven vacías.
 - Token manipulado → `401` real → aviso "Tu sesión terminó" → reingreso al destino.
 - `?volver=https://…` ignorado (sin redirección abierta).
 - Inicio y Vinculación comparados con `GET /api/onboarding` en vivo; `aria-current` en navegación y en el paso actual.
-- Otra organización y rol (`read.only@bankvision.test`): nombre propio y texto "Lo gestiona una persona con rol…".
+- Otra organización y rol (`treasury.approver@bankvision.test`): nombre propio y texto "Lo gestiona una persona con rol…".
 - Móvil (Pixel 7): menú con `aria-expanded`, navegación y cierre al navegar.
 
 ### Auditoría visual (390 / 768 / 1280 / 1600 px)
@@ -95,7 +95,7 @@ formulario, avisos de grupo, catálogo de países con respaldo ISO-3.
 | `POST /api/ubos` vacío | `400` con `details` por nombre de campo del comando |
 | `POST /api/ubos` con 150 % y país de 2 letras | `400` (`ownershipPercentage`, `countryOfBirth`) |
 | `POST /api/ubos` con `id` inexistente | `422 "El beneficiario final no existe."` |
-| `POST /api/ubos` válido como `READ_ONLY` | `403 forbidden`, nada creado |
+| `POST /api/ubos` válido como `TREASURY_APPROVER` | `403 forbidden`, nada creado |
 
 ### Resultados automáticos
 

@@ -19,7 +19,7 @@ import { livenessCopy } from './onboarding-copy';
           @if (canManage()) {
             Registra a cada persona con participación o control de la empresa.
           } @else {
-            Los registra una persona con rol de Administración o Cumplimiento.
+            Los registra una persona con rol de Administración.
           }
         </p>
       </div>

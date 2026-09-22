@@ -88,7 +88,7 @@ export function fixturePayout(overrides: Record<string, unknown> = {}) {
     approvalState: 'PENDING_APPROVAL',
     status: 'NOT_SUBMITTED',
     terminal: false,
-    makerUserId: 'juriscop:treasury_maker',
+    makerUserId: 'juriscop:admin',
     priceLocked: true,
     createdAt: '2026-09-14T17:00:00Z',
     ...overrides,

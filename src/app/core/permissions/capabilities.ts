@@ -7,29 +7,29 @@ import { Role } from './role';
  */
 export const CAPABILITY_ROLES = {
   /** POST/PUT /api/onboarding, POST /api/ubos, /api/ubos/sync, /api/ubos/liveness-links */
-  'onboarding.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'onboarding.manage': ['ADMIN'],
   /** POST /api/virtual-accounts */
-  'accounts.open': ['ADMIN', 'TREASURY_MAKER', 'COMPLIANCE_INTERNAL'],
+  'accounts.open': ['ADMIN'],
   /** POST /api/virtual-accounts/{id}/simulate-deposit */
-  'accounts.simulateDeposit': ['ADMIN', 'TREASURY_MAKER'],
+  'accounts.simulateDeposit': ['ADMIN'],
   /** POST /api/recipients, /api/recipients/{id}/archive */
-  'recipients.manage': ['ADMIN', 'TREASURY_MAKER'],
-  /** POST /api/payouts/preview, /api/quotations, /api/payouts */
-  'payouts.prepare': ['ADMIN', 'TREASURY_MAKER'],
+  'recipients.manage': ['ADMIN'],
+  /** POST /api/quotations, /api/payouts */
+  'payouts.prepare': ['ADMIN'],
   /** POST /api/payouts/{id}/approve, /reject */
   'payouts.approve': ['ADMIN', 'TREASURY_APPROVER'],
   /** POST /api/onboarding/refresh, /api/virtual-accounts/{id}/refresh|balance|deposits/sync, /api/payouts/{id}/refresh */
-  'provider.refresh': ['ADMIN', 'TREASURY_MAKER', 'TREASURY_APPROVER', 'COMPLIANCE_INTERNAL'],
+  'provider.refresh': ['ADMIN', 'TREASURY_APPROVER'],
   /** POST /api/rfis/sync, /refresh, PATCH items, documentos (subir y enlace de descarga) */
-  'rfis.manage': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'rfis.manage': ['ADMIN'],
   /** DELETE /api/rfis/{id}/items/{itemId}/documents/{documentId}: accion destructiva, solo ADMIN */
   'rfis.deleteDocuments': ['ADMIN'],
   /** GET /api/events, GET /api/audit */
-  'activity.audit': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'activity.audit': ['ADMIN'],
   /** GET /api/events/incidents, POST /api/events/{id}/retry */
-  'activity.manageIncidents': ['ADMIN', 'COMPLIANCE_INTERNAL'],
-  /** GET /api/operators (Cumplimiento necesita saber quién firma cada operación) */
-  'operators.view': ['ADMIN', 'COMPLIANCE_INTERNAL'],
+  'activity.manageIncidents': ['ADMIN'],
+  /** GET /api/operators */
+  'operators.view': ['ADMIN'],
   /** POST /api/operators, DELETE /api/operators/{id} */
   'operators.manage': ['ADMIN'],
   /** GET /api/platform/** (consola multiempresa) */

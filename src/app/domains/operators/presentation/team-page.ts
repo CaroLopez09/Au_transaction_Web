@@ -55,7 +55,7 @@ export class TeamPage implements OnInit {
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
     password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), Validators.maxLength(100)]],
-    role: ['TREASURY_MAKER' as AssignableRole, Validators.required],
+    role: ['TREASURY_APPROVER' as AssignableRole, Validators.required],
   });
 
   ngOnInit(): void {
@@ -89,7 +89,7 @@ export class TeamPage implements OnInit {
   }
 
   protected startCreating(): void {
-    this.form.reset({ firstName: '', lastName: '', email: '', password: '', role: 'TREASURY_MAKER' });
+    this.form.reset({ firstName: '', lastName: '', email: '', password: '', role: 'TREASURY_APPROVER' });
     this.createError.set(null);
     this.notice.set(null);
     this.drawerOpen.set(true);

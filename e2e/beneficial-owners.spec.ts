@@ -6,8 +6,8 @@ import { expectNoAxeViolations, seedPassword, signIn } from './support';
  * trabaja siempre sobre UN registro identificable en `au-colombia`: lo crea por la UI solo si no existe
  * y en adelante lo edita, sin acumular datos entre ejecuciones.
  */
-const COMPLIANCE = 'compliance.internal@au-colombia.test';
-const READ_ONLY = 'read.only@au-colombia.test';
+const ADMIN = 'admin@au-colombia.test';
+const APPROVER = 'treasury.approver@au-colombia.test';
 const QA_OWNER = { firstName: 'Beneficiario QA', lastName: 'Frontend', fullName: 'Beneficiario QA Frontend' };
 
 interface UboJson {
@@ -37,15 +37,15 @@ async function answer(page: Page, question: string, value: 'Sí' | 'No') {
 }
 
 test.describe.serial('Beneficiarios finales: alta y edición contra el BFF', () => {
-  test('un rol de consulta ve el grupo pero no las acciones de escritura', async ({ page }) => {
-    await signIn(page, READ_ONLY, '/vinculacion?paso=beneficiarios');
+  test('un rol que solo aprueba pagos ve el grupo pero no las acciones de escritura', async ({ page }) => {
+    await signIn(page, APPROVER, '/vinculacion?paso=beneficiarios');
     await expect(page.getByRole('heading', { level: 2, name: 'Beneficiarios' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Registrar beneficiario' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Editar a / })).toHaveCount(0);
   });
 
   test('el formulario no llama al BFF si faltan respuestas y lleva el foco al primer error', async ({ page }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion?paso=beneficiarios');
+    await signIn(page, ADMIN, '/vinculacion?paso=beneficiarios');
     let saves = 0;
     page.on('request', (request) => {
       if (request.method() === 'POST' && request.url().endsWith('/api/ubos')) saves++;
@@ -67,8 +67,8 @@ test.describe.serial('Beneficiarios finales: alta y edición contra el BFF', () 
   });
 
   test('registra el beneficiario QA si no existe y queda persistido en el BFF', async ({ page, request }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion?paso=beneficiarios');
-    const before = await apiRoster(request, COMPLIANCE);
+    await signIn(page, ADMIN, '/vinculacion?paso=beneficiarios');
+    const before = await apiRoster(request, ADMIN);
     test.skip(
       before.some((owner) => owner.fullName === QA_OWNER.fullName),
       'El registro QA ya existe: se verifica la edición para no crear duplicados imborrables.',
@@ -89,14 +89,14 @@ test.describe.serial('Beneficiarios finales: alta y edición contra el BFF', () 
 
     await expect(drawer(page)).toBeHidden();
     await expect(page.getByText(`${QA_OWNER.fullName}: beneficiario registrado.`)).toBeAttached();
-    const created = (await apiRoster(request, COMPLIANCE)).filter((owner) => owner.fullName === QA_OWNER.fullName);
+    const created = (await apiRoster(request, ADMIN)).filter((owner) => owner.fullName === QA_OWNER.fullName);
     expect(created).toHaveLength(1);
     expect(created[0]).toMatchObject({ ownershipPercentage: 60, countryOfBirth: 'COL', beneficialOwner: true });
   });
 
   test('edita el beneficiario QA, persiste el cambio y lo restablece', async ({ page, request }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion?paso=beneficiarios');
-    const owners = await apiRoster(request, COMPLIANCE);
+    await signIn(page, ADMIN, '/vinculacion?paso=beneficiarios');
+    const owners = await apiRoster(request, ADMIN);
     const qa = owners.find((owner) => owner.fullName === QA_OWNER.fullName);
     expect(qa, 'el registro QA debe existir tras el test de alta').toBeTruthy();
 
@@ -114,19 +114,19 @@ test.describe.serial('Beneficiarios finales: alta y edición contra el BFF', () 
     await expect(drawer(page)).toBeHidden();
     await expect(page.getByText(`${QA_OWNER.fullName}: cambios guardados.`)).toBeAttached();
     await expect(edit).toBeFocused();
-    expect((await apiRoster(request, COMPLIANCE)).find((owner) => owner.id === qa!.id)?.signer).toBe(!qa!.signer);
+    expect((await apiRoster(request, ADMIN)).find((owner) => owner.id === qa!.id)?.signer).toBe(!qa!.signer);
 
     await edit.click();
     await answer(page, '¿Firma por la empresa?', qa!.signer ? 'Sí' : 'No');
     await drawer(page).getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(drawer(page)).toBeHidden();
-    const restored = (await apiRoster(request, COMPLIANCE)).filter((owner) => owner.fullName === QA_OWNER.fullName);
+    const restored = (await apiRoster(request, ADMIN)).filter((owner) => owner.fullName === QA_OWNER.fullName);
     expect(restored).toHaveLength(1);
     expect(restored[0].signer).toBe(qa!.signer);
   });
 
   test('@mobile el drawer ocupa la pantalla y conserva las acciones al pie', async ({ page }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion?paso=beneficiarios');
+    await signIn(page, ADMIN, '/vinculacion?paso=beneficiarios');
     await page.getByRole('button', { name: 'Registrar beneficiario' }).click();
     const box = await drawer(page).boundingBox();
     const viewport = page.viewportSize()!;

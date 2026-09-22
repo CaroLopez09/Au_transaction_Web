@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { toApiError } from '../../http/api-error';
+import { mapApiError } from '../../http/error-mapping';
 import { SessionStore } from '../session.store';
 
 type ImageKey = 'front' | 'back' | 'selfie';
@@ -77,7 +79,12 @@ export class IdentityVerificationPage {
         biometricConsent: consent,
       });
       this.result.set(response);
-    } catch (error) { this.error.set(error instanceof Error ? error.message : 'No fue posible validar la identidad.'); }
+    } catch (error) {
+      // El BFF reenvia el motivo real del proveedor biometrico (p. ej. "no se detecto un rostro")
+      // en `message` de un business_rule_violation: mostrarlo tal cual, no un mensaje generico.
+      const apiError = toApiError(error);
+      this.error.set(apiError.message ?? mapApiError(apiError).description);
+    }
     finally { this.busy.set(false); }
   }
 }

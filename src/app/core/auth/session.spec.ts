@@ -52,10 +52,10 @@ const fixtureSession = (expiresAt: number): Session => ({
   expiresAt,
   tenantName: 'Fixture',
   operator: {
-    userId: 'fixture:read_only',
-    email: 'read.only@fixture.test',
+    userId: 'fixture:approver',
+    email: 'approver@fixture.test',
     tenantId: 'fixture',
-    role: 'READ_ONLY',
+    role: 'TREASURY_APPROVER',
     mfaEnabled: false,
     mfaEnforced: false,
   },

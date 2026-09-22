@@ -62,11 +62,15 @@ import { pendingFieldLabel } from '../../domain/pending-field-labels';
       margin: var(--au-space-1) 0 0;
       padding-left: var(--au-space-5);
     }
+    .title + ul li {
+      overflow-wrap: anywhere;
+    }
     ul + .title {
       margin-top: var(--au-space-3);
     }
     .field {
       color: var(--au-text-muted);
+      overflow-wrap: anywhere;
     }
     .note {
       display: block;

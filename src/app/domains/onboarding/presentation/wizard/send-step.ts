@@ -100,7 +100,7 @@ export interface SectionSummary {
         </button>
       </div>
     } @else {
-      <p class="au-notice">Envía la información una persona con rol de Administración o Cumplimiento.</p>
+      <p class="au-notice">Envía la información una persona con rol de Administración.</p>
     }
 
     @if (confirming()) {

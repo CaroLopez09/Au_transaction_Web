@@ -6,8 +6,8 @@ import { collectConsoleErrors, expectNoAxeViolations, seedPassword, signIn } fro
  * la suite lo vacía al empezar y al terminar (PUT {} lo borra) para no dejar datos entre ejecuciones.
  * Nunca envía nada al proveedor: solo usa Guardar borrador y la navegación entre pasos.
  */
-const COMPLIANCE = 'compliance.internal@au-colombia.test';
-const READ_ONLY = 'read.only@au-colombia.test';
+const ADMIN = 'admin@au-colombia.test';
+const APPROVER = 'treasury.approver@au-colombia.test';
 const QA_COMPANY = 'Empresa QA Borrador';
 
 async function token(request: APIRequestContext, email: string): Promise<string> {
@@ -18,7 +18,7 @@ async function token(request: APIRequestContext, email: string): Promise<string>
 
 async function apiDraft(request: APIRequestContext): Promise<Record<string, Record<string, unknown>>> {
   const response = await request.get('/api/onboarding/draft', {
-    headers: { Authorization: `Bearer ${await token(request, COMPLIANCE)}` },
+    headers: { Authorization: `Bearer ${await token(request, ADMIN)}` },
   });
   expect(response.ok()).toBe(true);
   return (await response.json()).draft;
@@ -26,7 +26,7 @@ async function apiDraft(request: APIRequestContext): Promise<Record<string, Reco
 
 async function clearDraft(request: APIRequestContext): Promise<void> {
   const response = await request.put('/api/onboarding/draft', {
-    headers: { Authorization: `Bearer ${await token(request, COMPLIANCE)}` },
+    headers: { Authorization: `Bearer ${await token(request, ADMIN)}` },
     data: { draft: {} },
   });
   expect(response.ok()).toBe(true);
@@ -38,7 +38,7 @@ test.describe.serial('Vinculación: asistente con borrador en el BFF', () => {
 
   test('guarda el borrador, lo retoma al recargar y conserva el paso en la URL', async ({ page, request }) => {
     const errors = collectConsoleErrors(page);
-    await signIn(page, COMPLIANCE, '/vinculacion');
+    await signIn(page, ADMIN, '/vinculacion');
     await expect(page.getByRole('heading', { level: 2, name: 'Empresa' })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Empresa/ })).toHaveAttribute('aria-current', 'step');
     await expectNoAxeViolations(page);
@@ -84,10 +84,10 @@ test.describe.serial('Vinculación: asistente con borrador en el BFF', () => {
   });
 
   test('los pasos que dependen del expediente explican por qué no están disponibles', async ({ page }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion?paso=documentos');
+    await signIn(page, ADMIN, '/vinculacion?paso=documentos');
     await expect(page.getByRole('heading', { level: 2, name: 'Documentos de la empresa' })).toBeVisible();
     const onboarding = await page.request.get('/api/onboarding', {
-      headers: { Authorization: `Bearer ${await token(page.request, COMPLIANCE)}` },
+      headers: { Authorization: `Bearer ${await token(page.request, ADMIN)}` },
     });
     if (!(await onboarding.json()).kiraUserId) {
       await expect(page.getByText('Los documentos se habilitan después de crear el expediente')).toBeVisible();
@@ -100,8 +100,8 @@ test.describe.serial('Vinculación: asistente con borrador en el BFF', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('un rol de consulta ve el borrador sin poder editarlo', async ({ page }) => {
-    await signIn(page, READ_ONLY, '/vinculacion');
+  test('un rol que solo aprueba pagos ve el borrador sin poder editarlo', async ({ page }) => {
+    await signIn(page, APPROVER, '/vinculacion');
     await expect(page.getByText('Completa la vinculación una persona con rol de Administración')).toBeVisible();
     await expect(page.getByLabel('Razón social')).toHaveValue(QA_COMPANY);
     await expect(page.getByLabel('Razón social')).toBeDisabled();
@@ -114,7 +114,7 @@ test.describe.serial('Vinculación: asistente con borrador en el BFF', () => {
   });
 
   test('@mobile el selector de pasos y las acciones del pie caben en pantalla', async ({ page }) => {
-    await signIn(page, COMPLIANCE, '/vinculacion');
+    await signIn(page, ADMIN, '/vinculacion');
     const select = page.getByLabel('Paso', { exact: true });
     await expect(select).toBeVisible();
     for (const name of ['Anterior', 'Guardar borrador', 'Siguiente']) {

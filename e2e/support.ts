@@ -4,7 +4,7 @@ import { expect, Page } from '@playwright/test';
 /** Operadores creados por DevDataSeeder del BFF: `<rol con puntos>@<organización>.test`. */
 export const SEED_OPERATORS = {
   juriscopAdmin: 'admin@juriscop.test',
-  bankvisionReadOnly: 'read.only@bankvision.test',
+  bankvisionApprover: 'treasury.approver@bankvision.test',
 } as const;
 
 export function seedPassword(): string {

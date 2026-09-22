@@ -24,12 +24,7 @@ export interface Operator {
  * ADMIN y PLATFORM_OPERATOR quedan fuera a propósito: crearlos desde el portal sería escalar
  * privilegios, y el BFF los rechaza con 422.
  */
-export const ASSIGNABLE_ROLES = [
-  'TREASURY_MAKER',
-  'TREASURY_APPROVER',
-  'COMPLIANCE_INTERNAL',
-  'READ_ONLY',
-] as const satisfies readonly Role[];
+export const ASSIGNABLE_ROLES = ['TREASURY_APPROVER'] as const satisfies readonly Role[];
 
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
@@ -45,7 +40,7 @@ export interface CreateOperator {
 }
 
 export abstract class OperatorRepository {
-  /** GET /api/operators — Administración y Cumplimiento. */
+  /** GET /api/operators — Administración. */
   abstract list(): Observable<readonly Operator[]>;
   /** POST /api/operators — solo Administración. */
   abstract create(command: CreateOperator): Observable<Operator>;
