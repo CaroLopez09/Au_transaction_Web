@@ -48,16 +48,24 @@ test.describe('Verificación de identidad biométrica', () => {
     await expect(page.getByRole('heading', { name: 'Verifica tu identidad' })).toBeVisible();
     await expectNoAxeViolations(page);
 
-    // 3) Sube las 3 imágenes y consiente el tratamiento de datos biométricos.
+    // 3) Sube las 2 imágenes del documento y acepta el consentimiento; esto habilita la cámara.
     await page.locator('#front').setInputFiles(`${FIXTURES}/document-front.jpg`);
     await page.locator('#back').setInputFiles(`${FIXTURES}/document-back.jpg`);
-    await page.locator('#selfie').setInputFiles(`${FIXTURES}/selfie.jpg`);
     await page.getByLabel(/Autorizo el tratamiento/).check();
+
+    // El dispositivo de video simulado de Chromium no contiene un rostro real, así que forzamos
+    // el respaldo de captura manual (sin detección automática) para poder tomar la foto en CI:
+    // lo que importa aquí es el viaje real cámara → multipart → BankVision, no el heurístico de
+    // encuadre en el navegador (eso no se puede probar de forma fiable sin una webcam real).
+    await page.evaluate(() => {
+      Reflect.deleteProperty(globalThis, 'FaceDetector');
+    });
+    await page.getByRole('button', { name: 'Activar cámara' }).click();
 
     const validation = page.waitForResponse(
       (response) => response.url().includes('/verify-identity') && response.request().method() === 'POST',
     );
-    await page.getByRole('button', { name: 'Enviar para validación' }).click();
+    await page.getByRole('button', { name: 'Tomar foto' }).click();
     const response = await validation;
 
     // El resultado depende de si BankVision detecta o no un rostro real en la selfie sintética:

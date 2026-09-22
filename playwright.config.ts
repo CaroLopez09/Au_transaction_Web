@@ -14,6 +14,10 @@ export default defineConfig({
     baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:4200',
     locale: 'es-CO',
     trace: 'retain-on-failure',
+    permissions: ['camera'],
+    launchOptions: {
+      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+    },
   },
   projects: [
     {
