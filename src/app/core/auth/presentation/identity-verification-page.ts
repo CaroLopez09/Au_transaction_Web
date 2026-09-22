@@ -22,8 +22,18 @@ type ImageKey = 'front' | 'back' | 'selfie';
         @if (result(); as response) {
           <p class="notice" role="status">Resultado: {{ response.status }}.</p>
           @if (response.status === 'REJECTED') {
-            <p class="error">No pudimos validar tu identidad. Puedes intentar de nuevo con una nueva foto.</p>
-            <button type="button" class="au-button au-button--secondary" (click)="retry()">Intentar de nuevo</button>
+            @if (response.remainingAttempts === 0) {
+              <p class="error">
+                No pudimos validar tu identidad tras varios intentos. Pide a un administrador de tu empresa que
+                reinicie la verificación desde el portal.
+              </p>
+            } @else {
+              <p class="error">No pudimos validar tu identidad. Puedes intentar de nuevo con una nueva foto.</p>
+              @if (response.remainingAttempts !== null) {
+                <p class="hint">Te quedan {{ response.remainingAttempts }} intento(s).</p>
+              }
+              <button type="button" class="au-button au-button--secondary" (click)="retry()">Intentar de nuevo</button>
+            }
           } @else if (response.status === 'IN_REVIEW') {
             <p class="hint">
               Tu verificación quedó en revisión manual: aún no puedes ingresar. Te avisaremos cuando esté lista, o
@@ -96,7 +106,7 @@ export class IdentityVerificationPage {
   });
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly result = signal<{ status: string } | null>(null);
+  protected readonly result = signal<{ status: string; remainingAttempts: number | null } | null>(null);
   protected readonly images = signal<Partial<Record<ImageKey, File>>>({});
 
   private readonly consentChecked = toSignal(this.form.controls.consent.valueChanges, {

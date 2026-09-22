@@ -15,7 +15,7 @@ class FixtureSessionRepository extends SessionRepository {
   signIn = vi.fn(() =>
     of({ kind: 'session' as const, accessToken: 'fixture-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }),
   );
-  verifyIdentity = vi.fn(() => of({ status: 'APPROVED', verificationId: 'identity-1' }));
+  verifyIdentity = vi.fn(() => of({ status: 'APPROVED', verificationId: 'identity-1', remainingAttempts: null }));
   currentOperator = vi.fn(() =>
     of({
       userId: 'fixture:admin',

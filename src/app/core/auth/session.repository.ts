@@ -34,6 +34,7 @@ export interface IdentityUpload {
 export interface IdentityResult {
   readonly status: string;
   readonly verificationId: string | null;
+  readonly remainingAttempts: number | null;
 }
 
 /** Secreto TOTP que se muestra una sola vez para la app autenticadora. */
