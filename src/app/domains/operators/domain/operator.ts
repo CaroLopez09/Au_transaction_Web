@@ -21,10 +21,10 @@ export interface Operator {
 
 /**
  * Roles que un administrador puede repartir (ManageOperatorsService.ASSIGNABLE).
- * ADMIN y PLATFORM_OPERATOR quedan fuera a propósito: crearlos desde el portal sería escalar
- * privilegios, y el BFF los rechaza con 422.
+ * PLATFORM_OPERATOR queda fuera a propósito: crearlo desde el portal sería escalar
+ * privilegios fuera de la empresa, y el BFF lo rechaza con 422.
  */
-export const ASSIGNABLE_ROLES = ['TREASURY_APPROVER'] as const satisfies readonly Role[];
+export const ASSIGNABLE_ROLES = ['ADMIN', 'TREASURY_APPROVER'] as const satisfies readonly Role[];
 
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
