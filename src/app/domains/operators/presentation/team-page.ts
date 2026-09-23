@@ -13,7 +13,6 @@ import { fetchRemote, loading, RemoteData, runAction } from '../../../shared/uti
 import {
   ASSIGNABLE_ROLES,
   AssignableRole,
-  MIN_PASSWORD_LENGTH,
   Operator,
   OperatorRepository,
 } from '../domain/operator';
@@ -38,7 +37,6 @@ export class TeamPage implements OnInit {
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly roles = ASSIGNABLE_ROLES;
-  protected readonly minPassword = MIN_PASSWORD_LENGTH;
   protected readonly canManage = computed(() => this.session.can('operators.manage'));
   protected readonly rows = signal<RemoteData<readonly Operator[]>>(loading());
 
@@ -50,13 +48,14 @@ export class TeamPage implements OnInit {
   protected readonly suspending = signal(false);
   protected readonly reactivating = signal<string | null>(null);
   protected readonly relaunching = signal<string | null>(null);
+  protected readonly toResetPassword = signal<Operator | null>(null);
+  protected readonly resettingPassword = signal(false);
   protected readonly actionError = signal<UserFacingError | null>(null);
 
   protected readonly form = this.fb.group({
     firstName: ['', [Validators.required, Validators.maxLength(100)]],
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
-    password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), Validators.maxLength(100)]],
     role: ['TREASURY_APPROVER' as AssignableRole, Validators.required],
   });
 
@@ -91,7 +90,7 @@ export class TeamPage implements OnInit {
   }
 
   protected startCreating(): void {
-    this.form.reset({ firstName: '', lastName: '', email: '', password: '', role: 'TREASURY_APPROVER' });
+    this.form.reset({ firstName: '', lastName: '', email: '', role: 'TREASURY_APPROVER' });
     this.createError.set(null);
     this.notice.set(null);
     this.drawerOpen.set(true);
@@ -117,8 +116,8 @@ export class TeamPage implements OnInit {
       return;
     }
     this.drawerOpen.set(false);
-    // La contraseña no vuelve a mostrarse: quien la creó se la entrega a la persona.
-    this.notice.set(`${result.value.fullName} quedó pendiente de validación de identidad.`);
+    // La contraseña temporal la genera el backend y se envía por correo: aquí nunca aparece.
+    this.notice.set(`${result.value.fullName} quedó pendiente de validación de identidad. Recibirá sus credenciales por correo.`);
     await this.load();
   }
 
@@ -171,7 +170,25 @@ export class TeamPage implements OnInit {
     await this.load();
   }
 
-  protected invalid(control: 'firstName' | 'lastName' | 'email' | 'password'): boolean {
+  protected async confirmResetPassword(): Promise<void> {
+    const target = this.toResetPassword();
+    if (!target) {
+      return;
+    }
+    this.resettingPassword.set(true);
+    this.actionError.set(null);
+    const result = await runAction(this.repository.resetPassword(target.id));
+    this.resettingPassword.set(false);
+    this.toResetPassword.set(null);
+    if (!result.ok) {
+      this.actionError.set(result.error);
+      return;
+    }
+    // El backend nunca devuelve la contraseña: solo confirma que el correo se envió.
+    this.notice.set(`Se generó una nueva contraseña temporal para ${target.fullName} y se envió por correo.`);
+  }
+
+  protected invalid(control: 'firstName' | 'lastName' | 'email'): boolean {
     const field = this.form.controls[control];
     return field.invalid && field.touched;
   }

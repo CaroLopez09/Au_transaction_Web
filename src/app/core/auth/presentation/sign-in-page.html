@@ -87,6 +87,9 @@
       >
         {{ submitting() ? 'Ingresando…' : 'Ingresar' }}
       </button>
+      <a class="au-button au-button--quiet au-button--block" routerLink="/olvide-mi-contrasena">
+        ¿Olvidaste tu contraseña?
+      </a>
     </form>
     }
     @case ('code') {
@@ -156,6 +159,62 @@
           Cancelar
         </button>
       </section>
+    }
+    @case ('password-change') {
+      <form [formGroup]="newPasswordForm" (ngSubmit)="submitPasswordChange()" novalidate aria-labelledby="password-change-title">
+        <au-logo class="compact-logo" tone="on-light" [height]="28" />
+        <h1 id="password-change-title">Crea tu nueva contraseña</h1>
+        <p class="lede">Por seguridad, debes reemplazar la contraseña temporal antes de continuar.</p>
+        <div aria-live="assertive">
+          @if (error(); as failure) {
+            <div class="error-summary" tabindex="-1" #errorSummary>
+              <au-icon name="alert" [size]="18" />
+              <div>
+                <p class="error-title">{{ failure.title }}</p>
+                <p>{{ failure.description }}</p>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="au-field">
+          <label class="au-label" for="new-password">Nueva contraseña</label>
+          <input
+            id="new-password"
+            class="au-input"
+            type="password"
+            formControlName="newPassword"
+            autocomplete="new-password"
+            [attr.aria-invalid]="!!newPasswordFieldError('newPassword')"
+            [attr.aria-describedby]="newPasswordFieldError('newPassword') ? 'new-password-error' : null"
+          />
+          @if (newPasswordFieldError('newPassword'); as message) {
+            <p class="au-field-error" id="new-password-error">{{ message }}</p>
+          }
+        </div>
+        <div class="au-field">
+          <label class="au-label" for="confirm-new-password">Confirmar nueva contraseña</label>
+          <input
+            id="confirm-new-password"
+            class="au-input"
+            type="password"
+            formControlName="confirmNewPassword"
+            autocomplete="new-password"
+            [attr.aria-invalid]="!!newPasswordFieldError('confirmNewPassword')"
+            [attr.aria-describedby]="newPasswordFieldError('confirmNewPassword') ? 'confirm-new-password-error' : null"
+          />
+          @if (newPasswordFieldError('confirmNewPassword'); as message) {
+            <p class="au-field-error" id="confirm-new-password-error">{{ message }}</p>
+          }
+        </div>
+        <button
+          type="submit"
+          class="au-button au-button--primary au-button--block submit"
+          [disabled]="submitting()"
+          [attr.aria-busy]="submitting()"
+        >
+          {{ submitting() ? 'Guardando…' : 'Guardar y continuar' }}
+        </button>
+      </form>
     }
   }
 </main>

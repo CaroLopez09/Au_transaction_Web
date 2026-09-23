@@ -99,6 +99,15 @@
                           {{ relaunching() === operator.id ? 'Relanzando…' : 'Relanzar identidad' }}
                         </button>
                       }
+                      @if (operator.active) {
+                        <button
+                          type="button"
+                          class="au-button au-button--secondary"
+                          (click)="toResetPassword.set(operator)"
+                        >
+                          Restablecer contraseña
+                        </button>
+                      }
                     </td>
                   }
                 </tr>
@@ -152,25 +161,12 @@
           autocomplete="off"
         />
         <p class="au-help">Con este correo ingresa al portal. No puede repetirse en la plataforma.</p>
+        <p class="au-help">
+          El backend genera una contraseña temporal segura y la envía por correo junto con las instrucciones de
+          acceso. La persona deberá cambiarla en su primer ingreso.
+        </p>
         @if (invalid('email')) {
           <p class="au-field-error" role="alert">Escribe un correo válido.</p>
-        }
-      </div>
-      <div class="au-field">
-        <label class="au-label" for="operator-password">Contraseña inicial</label>
-        <input
-          id="operator-password"
-          class="au-input"
-          type="password"
-          formControlName="password"
-          maxlength="100"
-          autocomplete="new-password"
-        />
-        <p class="au-help">
-          Mínimo {{ minPassword }} caracteres. La persona podrá ingresar cuando complete la validación de identidad.
-        </p>
-        @if (invalid('password')) {
-          <p class="au-field-error" role="alert">Usa al menos {{ minPassword }} caracteres.</p>
         }
       </div>
       <div class="au-field">
@@ -216,5 +212,19 @@
       No podrá volver a ingresar. La cuenta se suspende, no se borra: los pagos y las aprobaciones que ya firmó
       conservan su nombre.
     </p>
+  </au-confirm-dialog>
+}
+
+@if (toResetPassword(); as target) {
+  <au-confirm-dialog
+    [open]="true"
+    [heading]="'¿Deseas restablecer la contraseña de ' + target.fullName + '?'"
+    confirmLabel="Restablecer contraseña"
+    busyLabel="Restableciendo…"
+    [busy]="resettingPassword()"
+    (confirmed)="confirmResetPassword()"
+    (cancelled)="toResetPassword.set(null)"
+  >
+    <p>Se generará una nueva contraseña temporal y será enviada al correo registrado.</p>
   </au-confirm-dialog>
 }

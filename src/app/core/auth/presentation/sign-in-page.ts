@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../http/api-error';
 import { mapApiError, UserFacingError } from '../../http/error-mapping';
 import { AuLogo } from '../../../shared/ui/au-logo';
@@ -13,12 +13,13 @@ import { MfaEnrollmentPanel } from './mfa-enrollment';
 type Stage =
   | { readonly kind: 'credentials' }
   | { readonly kind: 'code'; readonly challenge: string }
-  | { readonly kind: 'setup'; readonly challenge: string; readonly enrollment: MfaEnrollment | null };
+  | { readonly kind: 'setup'; readonly challenge: string; readonly enrollment: MfaEnrollment | null }
+  | { readonly kind: 'password-change' };
 
 @Component({
   selector: 'au-sign-in-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, AuLogo, Icon, MfaEnrollmentPanel],
+  imports: [ReactiveFormsModule, RouterLink, AuLogo, Icon, MfaEnrollmentPanel],
   templateUrl: './sign-in-page.html',
   styleUrl: './sign-in-page.css',
 })
@@ -38,6 +39,10 @@ export class SignInPage {
     Validators.required,
     Validators.pattern(/^\d{6}$/),
   ]);
+  protected readonly newPasswordForm = inject(FormBuilder).nonNullable.group({
+    newPassword: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(100)]],
+    confirmNewPassword: ['', Validators.required],
+  });
   protected readonly stage = signal<Stage>({ kind: 'credentials' });
 
   protected readonly submitting = signal(false);
@@ -66,6 +71,20 @@ export class SignInPage {
     return 'Escribe un correo válido, por ejemplo nombre@empresa.com.';
   }
 
+  protected newPasswordFieldError(name: 'newPassword' | 'confirmNewPassword'): string | null {
+    const control = this.newPasswordForm.controls[name];
+    if (!control.invalid || !control.touched) {
+      return null;
+    }
+    if (control.hasError('required')) {
+      return 'Este campo es obligatorio.';
+    }
+    if (control.hasError('minlength')) {
+      return 'Debe tener al menos 12 caracteres.';
+    }
+    return 'Valor inválido.';
+  }
+
   protected async submit(): Promise<void> {
     this.submitted.set(true);
     if (this.form.invalid || this.submitting()) {
@@ -86,6 +105,9 @@ export class SignInPage {
         this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment: null });
         const enrollment = await this.session.beginMfaSetup(step.challenge);
         this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment });
+      } else if (step.kind === 'password-change') {
+        this.newPasswordForm.reset({ newPassword: '', confirmNewPassword: '' });
+        this.stage.set({ kind: 'password-change' });
       } else {
         await this.router.navigate(['/verificar-identidad']);
       }
@@ -125,6 +147,46 @@ export class SignInPage {
     try {
       await this.session.confirmMfaSetup(current.challenge, code);
       await this.enter();
+    } catch (error) {
+      this.fail(error, false);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  /** Cambio obligatorio de contraseña: alta con temporal o reset administrativo. */
+  protected async submitPasswordChange(): Promise<void> {
+    if (this.newPasswordForm.invalid || this.submitting()) {
+      this.newPasswordForm.markAllAsTouched();
+      return;
+    }
+    const { newPassword, confirmNewPassword } = this.newPasswordForm.getRawValue();
+    if (newPassword !== confirmNewPassword) {
+      this.error.set({
+        title: 'Revisa los datos',
+        description: 'Las contraseñas no coinciden.',
+        action: 'fix-fields',
+        fieldErrors: {},
+        providerUnavailable: false,
+        source: { status: 422, code: 'validation_error', message: 'Las contraseñas no coinciden.', details: null },
+      });
+      return;
+    }
+    this.submitting.set(true);
+    this.error.set(null);
+    try {
+      const step = await this.session.completePasswordChange(newPassword, confirmNewPassword);
+      if (step.kind === 'done') {
+        await this.enter();
+      } else if (step.kind === 'mfa-code') {
+        this.stage.set({ kind: 'code', challenge: step.challenge });
+      } else if (step.kind === 'mfa-setup') {
+        this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment: null });
+        const enrollment = await this.session.beginMfaSetup(step.challenge);
+        this.stage.set({ kind: 'setup', challenge: step.challenge, enrollment });
+      } else {
+        await this.router.navigate(['/verificar-identidad']);
+      }
     } catch (error) {
       this.fail(error, false);
     } finally {

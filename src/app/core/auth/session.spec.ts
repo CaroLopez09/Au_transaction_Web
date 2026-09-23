@@ -30,6 +30,12 @@ class FixtureSessionRepository extends SessionRepository {
   setupMfa = vi.fn(() => of({ secret: 'JBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/x' }));
   enableMfa = vi.fn(() => of({ accessToken: 'enabled-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }));
   disableMfa = vi.fn(() => of(undefined));
+  changePassword = vi.fn(() =>
+    of({ kind: 'session' as const, accessToken: 'pwd-changed-token', expiresInSeconds: 28_800, tenantName: 'Fixture' }),
+  );
+  forgotPasswordStart = vi.fn(() => of(undefined));
+  forgotPasswordVerify = vi.fn(() => of('fixture-reset-token'));
+  forgotPasswordReset = vi.fn(() => of(undefined));
 }
 
 function memoryPersistence(initial: Session | null = null): SessionPersistence & { value: Session | null } {

@@ -46,6 +46,10 @@ export class OperatorHttpRepository extends OperatorRepository {
       .post<OperatorViewDto>(`${this.url}/${encodeURIComponent(id)}/relaunch-identity`, {})
       .pipe(map(toOperator));
   }
+
+  resetPassword(id: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/${encodeURIComponent(id)}/reset-password`, {});
+  }
 }
 
 export function toOperator(dto: OperatorViewDto): Operator {

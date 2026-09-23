@@ -28,21 +28,17 @@ export const ASSIGNABLE_ROLES = ['ADMIN', 'TREASURY_APPROVER'] as const satisfie
 
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
-/** OperatorCommands.CreateOperator: la contraseña la fija quien da de alta y tiene 12 caracteres mínimo. */
-export const MIN_PASSWORD_LENGTH = 12;
-
 export interface CreateOperator {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly password: string;
   readonly role: AssignableRole;
 }
 
 export abstract class OperatorRepository {
   /** GET /api/operators — Administración. */
   abstract list(): Observable<readonly Operator[]>;
-  /** POST /api/operators — solo Administración. */
+  /** POST /api/operators — solo Administración. El backend genera y envía la contraseña temporal. */
   abstract create(command: CreateOperator): Observable<Operator>;
   /** DELETE /api/operators/{id} — suspende, no borra: la persona sigue siendo actor de lo que firmó. */
   abstract suspend(id: string): Observable<Operator>;
@@ -50,4 +46,6 @@ export abstract class OperatorRepository {
   abstract reactivate(id: string): Observable<Operator>;
   /** POST /api/operators/{id}/relaunch-identity — solo para identidades rechazadas. */
   abstract relaunchIdentity(id: string): Observable<Operator>;
+  /** POST /api/operators/{id}/reset-password — genera una contraseña temporal nueva y la envía por correo. */
+  abstract resetPassword(id: string): Observable<void>;
 }

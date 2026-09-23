@@ -12,6 +12,9 @@ export function toSignInResult(dto: LoginResultDto): SignInResult {
       expiresInSeconds: dto.expiresIn,
     };
   }
+  if (dto.passwordChangeChallenge) {
+    return { kind: 'password-change', challenge: dto.passwordChangeChallenge, expiresInSeconds: dto.expiresIn };
+  }
   if (dto.mfaChallenge) {
     return {
       kind: 'mfa',

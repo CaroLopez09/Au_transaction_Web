@@ -41,6 +41,12 @@ export const routes: Routes = [
     loadComponent: () => import('./core/auth/presentation/identity-verification-page').then((m) => m.IdentityVerificationPage),
   },
   {
+    path: 'olvide-mi-contrasena',
+    title: 'Recuperar contraseña' + TITLE_SUFFIX,
+    canMatch: [guestGuard],
+    loadComponent: () => import('./core/auth/presentation/forgot-password-page').then((m) => m.ForgotPasswordPage),
+  },
+  {
     path: '',
     canMatch: [authenticatedGuard],
     canActivateChild: [audienceGuard],

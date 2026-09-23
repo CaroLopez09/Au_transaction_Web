@@ -20,7 +20,8 @@ export type SignInResult =
       readonly setupRequired: boolean;
       readonly expiresInSeconds: number;
     }
-  | { readonly kind: 'identity'; readonly challenge: string; readonly userId: string; readonly expiresInSeconds: number };
+  | { readonly kind: 'identity'; readonly challenge: string; readonly userId: string; readonly expiresInSeconds: number }
+  | { readonly kind: 'password-change'; readonly challenge: string; readonly expiresInSeconds: number };
 
 export interface IdentityUpload {
   readonly documentFrontImage: File;
@@ -57,4 +58,12 @@ export abstract class SessionRepository {
   abstract enableMfa(challenge: string | null, code: string): Observable<SessionGrant>;
   /** POST /api/auth/mfa/disable — solo si el entorno no lo exige. */
   abstract disableMfa(code: string): Observable<void>;
+  /** POST /api/auth/change-password — completa el cambio obligatorio (alta o reset administrativo). */
+  abstract changePassword(challenge: string, newPassword: string, confirmNewPassword: string): Observable<SignInResult>;
+  /** POST /api/auth/forgot-password/start — pide el envío de un OTP al correo indicado. */
+  abstract forgotPasswordStart(email: string): Observable<void>;
+  /** POST /api/auth/forgot-password/verify — valida el OTP y devuelve un token de restablecimiento. */
+  abstract forgotPasswordVerify(email: string, otp: string): Observable<string>;
+  /** POST /api/auth/forgot-password/reset — fija la nueva contraseña con el token de restablecimiento. */
+  abstract forgotPasswordReset(resetToken: string, newPassword: string, confirmNewPassword: string): Observable<void>;
 }

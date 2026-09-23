@@ -56,6 +56,30 @@ export class SessionHttpRepository extends SessionRepository {
     return this.http.post<void>(`${this.baseUrl}/auth/mfa/disable`, { code });
   }
 
+  changePassword(challenge: string, newPassword: string, confirmNewPassword: string): Observable<SignInResult> {
+    return this.http
+      .post<LoginResultDto>(`${this.baseUrl}/auth/change-password`, { challenge, newPassword, confirmNewPassword })
+      .pipe(map(toSignInResult));
+  }
+
+  forgotPasswordStart(email: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/forgot-password/start`, { email });
+  }
+
+  forgotPasswordVerify(email: string, otp: string): Observable<string> {
+    return this.http
+      .post<{ resetToken: string }>(`${this.baseUrl}/auth/forgot-password/verify`, { email, otp })
+      .pipe(map((dto) => dto.resetToken));
+  }
+
+  forgotPasswordReset(resetToken: string, newPassword: string, confirmNewPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/forgot-password/reset`, {
+      resetToken,
+      newPassword,
+      confirmNewPassword,
+    });
+  }
+
   currentOperator(accessToken: string): Observable<Operator> {
     const headers = new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
     return this.http.get<MeDto>(`${this.baseUrl}/auth/me`, { headers }).pipe(map(toOperator));
